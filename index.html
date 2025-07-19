@@ -559,17 +559,22 @@ const GOOGLE_CONFIG = {
         // --- LÓGICA DE SINCRONIZAÇÃO GOOGLE SHEETS ---
 
         // Funções de inicialização chamadas pelos scripts do Google no <head>
-        window.gapiLoaded = () => gapi.load('client', initializeGapiClient);
-        window.gisLoaded = () => {
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: GOOGLE_CONFIG.CLIENT_ID,
-                scope: 'https://www.googleapis.com/auth/spreadsheets',
-                callback: '', // Callback é definido dinamicamente
-            });
-            gisInited = true;
-            maybeEnableButtons();
-        };
 
+
+window.gapiLoaded = () => {
+    console.log('gapiLoaded');
+    gapi.load('client', initializeGapiClient);
+};
+window.gisLoaded = () => {
+    console.log('gisLoaded');
+    tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CONFIG.CLIENT_ID,
+        scope: 'https://www.googleapis.com/auth/spreadsheets',
+        callback: '',
+    });
+    gisInited = true;
+    maybeEnableButtons();
+};
         async function initializeGapiClient() {
             await gapi.client.init({
                 apiKey: GOOGLE_CONFIG.API_KEY,
@@ -685,7 +690,10 @@ const GOOGLE_CONFIG = {
                 render();
             }
         }        // ...existing code...
-        document.getElementById('signin-button').addEventListener('click', handleAuthClick);
+        document.getElementById('signin-button').addEventListener('click', () => {
+    console.log('Botão de login clicado');
+    handleAuthClick();
+});
         document.getElementById('signout-button').addEventListener('click', handleSignoutClick);
         // ...existing code...        // ...existing code...
 
