@@ -212,7 +212,7 @@
         </div>
     </div>
 
-    <script type="module">
+    <script>
         // --- CONFIGURAÇÃO GOOGLE SHEETS ---
         // v v v INSIRA SUAS CREDENCIAIS DO GOOGLE ABAIXO v v v
 const GOOGLE_CONFIG = {
@@ -591,6 +591,10 @@ window.gisLoaded = () => {
         }
         
         function handleAuthClick() {
+            if (typeof gapi === 'undefined' || typeof gapi.client === 'undefined') {
+        alert('Google API não carregada. Aguarde alguns segundos e tente novamente.');
+        return;
+    }
             tokenClient.callback = async (resp) => {
               if (resp.error !== undefined) throw (resp);
               document.getElementById('signin-button').style.display = 'none';
