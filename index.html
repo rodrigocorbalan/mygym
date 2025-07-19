@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>MyGym</title>
+    <meta name="description" content="MyGym - Gerencie seus treinos na academia de forma inteligente.">
+    <meta name="theme-color" content="#ffffff"/>
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/8f44fd/ffffff?text=Gym">
+    <link rel="manifest" href="manifest.json">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;7700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .nav-link.active { 
+            background-color: #f3e8ff;
+            color: #8f44fd;
+            font-weight: 600;
+        }
+        .suggested-glow {
+            box-shadow: 0 0 15px 2px rgba(143, 68, 253, 0.7);
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .exercise-checkbox:checked + label {
+            text-decoration: line-through;
+            color: #9ca3af;
+        }
+        #sync-status.syncing {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            50% { opacity: .5; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto max-w-4xl p-4">
+        
+        <header class="text-center mb-6">
+            <div class="flex justify-center items-center gap-4">
+                <h1 class="text-4xl font-bold text-purple-600">MyGym</h1>
+                <div id="sync-status" class="text-sm font-semibold p-2 rounded-lg"></div>
+            </div>
+            <p class="text-gray-500">Gerencie seus treinos na academia</p>
+        </header>
+
+        <nav class="bg-white rounded-lg shadow-sm p-2 flex justify-around mb-8">
+            <button data-page="treinos" class="nav-link flex-1 text-center p-2 rounded-md transition-all duration-300">🏋️ Treinos</button>
+            <button data-page="presenca" class="nav-link flex-1 text-center p-2 rounded-md transition-all duration-300">📅 Presença</button>
+            <button data-page="cardio" class="nav-link flex-1 text-center p-2 rounded-md transition-all duration-300">🏃 Cardio</button>
+            <button data-page="dados" class="nav-link flex-1 text-center p-2 rounded-md transition-all duration-300">📊 Dados</button>
+        </nav>
+
+        <main>
+            <section id="treinos" class="page">
+              <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
+                <h2 class="text-xl font-bold mb-4">Sincronização com Google Sheets</h2>
+                <p class="text-gray-600 mb-4">Para salvar e carregar seus dados na nuvem, faça login com sua conta Google e autorize o acesso à planilha.</p>
+                <div id="auth-container">
+                    <button id="signin-button" class="w-full bg-blue-500 text-white p-3 rounded-md font-semibold hover:bg-blue-600">Fazer Login com Google</button>
+                    <button id="signout-button" class="hidden w-full bg-red-500 text-white p-3 rounded-md font-semibold hover:bg-red-600">Sair da Conta</button>
+                </div>
+              </div>
+            
+              <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
+                <h2 class="text-xl font-bold mb-4">Adicionar Novo Exercício</h2>
+                <form id="add-exercise-form" class="grid md:grid-cols-4 gap-4 items-end">
+                    <div class="md:col-span-2">
+                        <label for="exercise-name" class="block text-sm font-medium text-gray-700">Nome do Exercício</label>
+                        <input type="text" id="exercise-name" required class="mt-1 block w-full p-2 border rounded-md">
+                    </div>
+                    <div>
+                        <label for="exercise-series" class="block text-sm font-medium text-gray-700">Séries</label>
+                        <input type="number" id="exercise-series" required class="mt-1 block w-full p-2 border rounded-md" value="4">
+                    </div>
+                    <div>
+                        <label for="exercise-reps" class="block text-sm font-medium text-gray-700">Reps</label>
+                        <input type="text" id="exercise-reps" required class="mt-1 block w-full p-2 border rounded-md" value="8-12">
+                    </div>
+                    <div class="md:col-span-3">
+                         <label for="exercise-workout" class="block text-sm font-medium text-gray-700">Associar ao Treino</label>
+                         <select id="exercise-workout" class="mt-1 block w-full p-2 border rounded-md bg-white">
+                            <option value="A">Treino A</option>
+                            <option value="B">Treino B</option>
+                            <option value="C">Treino C</option>
+                         </select>
+                    </div>
+                    <button type="submit" class="bg-purple-600 text-white p-2 rounded-md font-semibold hover:bg-purple-700">Adicionar</button>
+                </form>
+              </div>
+
+              <div id="workouts-grid" class="grid md:grid-cols-3 gap-6"></div>
+            </section>
+
+            <section id="presenca" class="page">
+                 <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
+                    <h2 class="text-xl font-bold mb-1">Registrar Presença</h2>
+                    <p class="text-gray-500 mb-4">Escolha o treino que você realizará hoje para iniciar.</p>
+                    <div id="presence-buttons" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+                 </div>
+                 <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-xl font-bold mb-4">Histórico de Presença</h2>
+                    <ul id="presence-history" class="space-y-3"></ul>
+                 </div>
+            </section>
+
+            <section id="cardio" class="page">
+                <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
+                     <h2 class="text-xl font-bold mb-1">Registrar Cardio</h2>
+                     <p class="text-gray-500 mb-4">Inicie e registre sua atividade de cardio.</p>
+                     <div id="cardio-timer-display" class="text-center my-4 hidden">
+                        <p class="text-gray-500">Tempo de Cardio</p>
+                        <p id="cardio-timer" class="text-4xl font-bold">00:00:00</p>
+                     </div>
+                     <form id="add-cardio-form" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                         <select id="cardio-activity" class="p-2 border rounded-md bg-white md:col-span-2">
+                             <option>Esteira 🏃</option>
+                             <option>Bicicleta 🚴</option>
+                             <option>Elíptico 🏃‍♀️</option>
+                             <option>Outro</option>
+                         </select>
+                         <button type="button" id="start-cardio-btn" class="bg-green-500 text-white p-2 rounded-md font-semibold hover:bg-green-600 transition-colors">Iniciar Cardio</button>
+                         <button type="button" id="stop-cardio-btn" class="hidden md:col-span-3 bg-purple-600 text-white p-3 rounded-md font-semibold hover:bg-purple-700 transition-colors">Concluir e Registrar Cardio</button>
+                     </form>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-xl font-bold mb-4">Histórico de Cardio</h2>
+                    <ul id="cardio-history" class="space-y-3"></ul>
+                 </div>
+            </section>
+
+            <section id="dados" class="page">
+                <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
+                    <h2 class="text-xl font-bold mb-4">Sincronização com a Nuvem</h2>
+                    <p class="text-gray-600 mb-4">Sincronize seus dados com o Google Sheets. Isso enviará suas alterações offline e baixará as atualizações mais recentes.</p>
+                    <button id="sync-btn" class="w-full bg-yellow-500 text-white p-3 rounded-md font-semibold hover:bg-yellow-600 transition-colors flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-refresh-cw"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                        Sincronizar Agora
+                    </button>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
+                    <h2 class="text-xl font-bold mb-4">Estatísticas</h2>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <h3 class="font-semibold mb-2">Distribuição de Treinos</h3>
+                            <canvas id="workout-chart"></canvas>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold mb-2">Resumo do Histórico</h3>
+                            <div id="stats-summary" class="space-y-2"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-xl font-bold mb-4">Gerenciamento de Dados Locais</h2>
+                    <div class="flex gap-4">
+                        <button id="backup-btn" class="flex-1 bg-green-500 text-white p-3 rounded-md font-semibold hover:bg-green-600 transition-colors">Fazer Backup</button>
+                        <label for="restore-input" class="flex-1 bg-blue-500 text-white p-3 rounded-md font-semibold hover:bg-blue-600 transition-colors text-center cursor-pointer">Restaurar Dados</label>
+                        <input type="file" id="restore-input" class="hidden" accept=".json">
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="workout-modal" class="modal-overlay">
+        <div class="bg-white rounded-lg shadow-xl w-11/12 max-w-2xl p-6">
+            <h2 class="text-2xl font-bold mb-2">Treino em Andamento</h2>
+            <div class="text-center bg-gray-100 p-4 rounded-lg mb-4">
+                <p class="text-gray-500">Tempo Total</p>
+                <p id="workout-timer" class="text-5xl font-bold text-purple-600">00:00:00</p>
+            </div>
+            <div id="workout-todolist" class="space-y-3 max-h-64 overflow-y-auto pr-2"></div>
+            <button id="finish-workout-btn" class="w-full bg-purple-600 text-white p-3 mt-4 rounded-md font-semibold hover:bg-purple-700 transition-colors disabled:bg-gray-400" disabled>Finalizar Treino</button>
+        </div>
+    </div>
+
+    <div id="cardio-prompt-modal" class="modal-overlay">
+        <div class="bg-white rounded-lg shadow-xl w-11/12 max-w-sm p-6 text-center">
+            <h2 class="text-xl font-bold mb-4">Treino finalizado!</h2>
+            <p class="text-gray-600 mb-6">Deseja registrar sua atividade de cardio agora?</p>
+            <div class="flex gap-4">
+                <button id="cardio-prompt-yes" class="flex-1 bg-green-500 text-white p-2 rounded-md font-semibold hover:bg-green-600">Sim, vamos lá!</button>
+                <button id="cardio-prompt-no" class="flex-1 bg-gray-300 text-gray-800 p-2 rounded-md font-semibold hover:bg-gray-400">Não, obrigado</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- CONFIGURAÇÃO GOOGLE SHEETS ---
+        // v v v INSIRA SUAS CREDENCIAIS DO GOOGLE ABAIXO v v v
+const GOOGLE_CONFIG = {
+    API_KEY: 'AIzaSyAw1PUBoZaAyufdwW--dcETgjiffD9mmaM', // <-- NÃO ESQUEÇA DE COLOCAR SUA CHAVE DE API AQUI!
+    CLIENT_ID: '512091144312-vvgiipfqi565sdpmsrp553obbunaigrc.apps.googleusercontent.com',
+    SPREADSHEET_ID: '1It0ezEDCM69k7QqAEAabkRU7d3vOCgZdVxkXZ1iKsok',
+    SHEETS: {
+        EXERCISES: 'Exercises',
+        PRESENCE: 'PresenceHistory',
+        CARDIO: 'CardioHistory'
+    }
+};
+        // ^ ^ ^ INSIRA SUAS CREDENCIAIS DO GOOGLE ACIMA ^ ^ ^
+
+        // --- CONFIGURAÇÃO INICIAL ---
+        const pages = document.querySelectorAll('.page');
+        const navLinks = document.querySelectorAll('.nav-link');
+        let workoutChartInstance = null;
+        let workoutTimerInterval = null;
+        let cardioTimerInterval = null;
+        let currentWorkoutSession = null;
+        let cardioStartTime = null;
+        let isSyncing = false;
+        let gapiInited = false;
+        let gisInited = false;
+        let tokenClient;
+
+        const defaultData = {
+            workouts: [
+                { id: 'A', name: 'Treino A', color: 'blue', exercises: [] },
+                { id: 'B', name: 'Treino B', color: 'green', exercises: [] },
+                { id: 'C', name: 'Treino C', color: 'purple', exercises: [] }
+            ],
+            presenceHistory: [],
+            cardioHistory: []
+        };
+        
+        let appData = {};
+        // Fila de Sincronização: Guarda ações (adicionar, remover) para enviar ao Google Sheets
+        let syncQueue = [];
+
+        // --- FUNÇÕES DE DADOS (localStorage) ---
+        const saveLocalData = () => {
+            localStorage.setItem('myGymData', JSON.stringify(appData));
+            localStorage.setItem('myGymSyncQueue', JSON.stringify(syncQueue));
+        };
+        const loadLocalData = () => {
+            const data = localStorage.getItem('myGymData');
+            appData = data ? JSON.parse(data) : JSON.parse(JSON.stringify(defaultData));
+            const queue = localStorage.getItem('myGymSyncQueue');
+            syncQueue = queue ? JSON.parse(queue) : [];
+        };
+        
+        // --- FUNÇÕES DE UTILIDADE ---
+        const formatTime = (seconds) => {
+            const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+            const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        };
+
+        const updateSyncStatus = () => {
+            const statusEl = document.getElementById('sync-status');
+            const isSignedIn = typeof gapi !== 'undefined' && gapi.client?.getToken();
+            if (!isSignedIn) {
+                 statusEl.textContent = 'Desconectado';
+                 statusEl.className = 'text-sm font-semibold p-2 rounded-lg text-gray-700 bg-gray-100';
+                 return;
+            }
+            if (isSyncing) {
+                statusEl.textContent = 'Sincronizando...';
+                statusEl.className = 'text-sm font-semibold p-2 rounded-lg text-blue-700 bg-blue-100 syncing';
+            } else if (syncQueue.length > 0) {
+                statusEl.textContent = `${syncQueue.length} alterações pendentes`;
+                statusEl.className = 'text-sm font-semibold p-2 rounded-lg text-yellow-700 bg-yellow-100';
+            } else {
+                statusEl.textContent = 'Sincronizado';
+                statusEl.className = 'text-sm font-semibold p-2 rounded-lg text-green-700 bg-green-100';
+            }
+        };
+
+        // --- LÓGICA DE RENDERIZAÇÃO ---
+        const render = () => {
+            renderWorkouts();
+            renderPresence();
+            renderCardio();
+            renderStats();
+            updateSyncStatus();
+        };
+
+        const renderWorkouts = () => {
+            const grid = document.getElementById('workouts-grid');
+            grid.innerHTML = '';
+            appData.workouts.forEach(workout => {
+                const column = document.createElement('div');
+                column.className = "bg-white p-6 rounded-lg shadow-sm";
+                column.innerHTML = `
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="w-3 h-3 rounded-full bg-${workout.color}-500"></span>
+                        <h3 class="text-lg font-bold">${workout.name}</h3>
+                        <span class="text-sm text-gray-500">(${workout.exercises.length} exercícios)</span>
+                    </div>
+                    <div class="space-y-3">
+                        ${workout.exercises.length === 0 ? '<p class="text-gray-400 text-center p-4">Nenhum exercício cadastrado.</p>' : ''}
+                        ${workout.exercises.map(ex => `
+                            <div class="bg-gray-100 p-4 rounded-lg flex justify-between items-center">
+                                <div><p class="font-semibold">${ex.Name}</p><p class="text-sm text-gray-600">${ex.Series} séries / ${ex.Reps} reps</p></div>
+                                <button data-action="delete-exercise" data-exercise-id="${ex.id}" class="text-red-500 hover:text-red-700 p-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                </button>
+                            </div>`).join('')}
+                    </div>`;
+                grid.appendChild(column);
+            });
+        };
+        
+        const renderPresence = () => {
+            const lastWorkout = appData.presenceHistory.length > 0 ? appData.presenceHistory.at(-1).WorkoutID : null;
+            let suggestedWorkoutId = 'A';
+            if (lastWorkout === 'A') suggestedWorkoutId = 'B';
+            if (lastWorkout === 'B') suggestedWorkoutId = 'C';
+            if (lastWorkout === 'C') suggestedWorkoutId = 'A';
+
+            document.getElementById('presence-buttons').innerHTML = appData.workouts.map(w => `
+                <button data-action="start-workout" data-workout-id="${w.id}" 
+                    class="p-4 rounded-lg font-semibold text-white bg-${w.color}-500 hover:bg-${w.color}-600 transition-all duration-300 ${w.id === suggestedWorkoutId ? 'suggested-glow relative' : ''}">
+                    ${w.id === suggestedWorkoutId ? '<span class="absolute top-2 right-2 bg-white text-purple-600 text-xs font-bold px-2 py-1 rounded-full">Sugerido</span>' : ''}
+                    Iniciar Treino ${w.id}
+                </button>`).join('');
+
+            const historyList = document.getElementById('presence-history');
+            historyList.innerHTML = appData.presenceHistory.length === 0 
+                ? '<p class="text-gray-400 text-center p-4">Nenhum registro de presença.</p>' 
+                : [...appData.presenceHistory].reverse().map(p => {
+                    const duration = (new Date(p.EndTime) - new Date(p.StartTime)) / 1000;
+                    const workout = appData.workouts.find(w => w.id === p.WorkoutID) || { color: 'gray' };
+                    return `
+                    <li class="bg-gray-100 p-3 rounded-lg flex items-center gap-4">
+                        <span class="w-3 h-3 rounded-full bg-${workout.color}-500"></span>
+                        <span class="font-semibold">Treino ${p.WorkoutID}</span>
+                        <span class="text-sm text-gray-500">Duração: ${formatTime(Math.round(duration))}</span>
+                        <span class="text-gray-500 ml-auto">${new Date(p.StartTime).toLocaleString('pt-BR')}</span>
+                    </li>`;
+                }).join('');
+        };
+        
+        const renderCardio = () => {
+            document.getElementById('cardio-history').innerHTML = appData.cardioHistory.length === 0 
+                ? '<p class="text-gray-400 text-center p-4">Nenhum registro de cardio.</p>' 
+                : [...appData.cardioHistory].reverse().map(c => `
+                    <li class="bg-gray-100 p-3 rounded-lg flex items-center gap-4">
+                        <span class="font-semibold">${c.Activity}</span>
+                        <span>${c.Duration} min</span>
+                        <span class="text-gray-500 ml-auto">${new Date(c.Date).toLocaleString('pt-BR', {day: '2-digit', month: '2-digit', year: 'numeric'})}</span>
+                    </li>`).join('');
+        };
+
+        const renderStats = () => {
+            const ctx = document.getElementById('workout-chart')?.getContext('2d');
+            if (!ctx) return;
+
+            const stats = { A: 0, B: 0, C: 0 };
+            appData.presenceHistory.forEach(p => {
+                if(stats[p.WorkoutID] !== undefined) stats[p.WorkoutID]++;
+            });
+
+            if(workoutChartInstance) workoutChartInstance.destroy();
+            workoutChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Treino A', 'Treino B', 'Treino C'],
+                    datasets: [{ data: [stats.A, stats.B, stats.C], backgroundColor: ['#3b82f6', '#22c55e', '#a855f7'] }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            document.getElementById('stats-summary').innerHTML = `
+                <p><strong>Total de Treinos:</strong> ${appData.presenceHistory.length}</p>
+                <p><strong>Total de Exercícios:</strong> ${appData.workouts.reduce((s, w) => s + w.exercises.length, 0)}</p>
+                <p><strong>Total de Minutos de Cardio:</strong> ${appData.cardioHistory.reduce((s, c) => s + c.Duration, 0)}</p>`;
+        };
+
+        // --- LÓGICA DE TREINO ---
+        const startWorkout = (workoutId) => {
+            const workout = appData.workouts.find(w => w.id === workoutId);
+            if(workout.exercises.length === 0) {
+                alert('Este treino não tem exercícios. Adicione exercícios primeiro.');
+                return;
+            }
+            currentWorkoutSession = {
+                id: `presence_${crypto.randomUUID()}`,
+                WorkoutID: workoutId,
+                StartTime: new Date().toISOString(),
+                EndTime: null,
+            };
+
+            const todolist = document.getElementById('workout-todolist');
+            todolist.innerHTML = workout.exercises.map(ex => `
+                <div class="flex items-center bg-gray-100 p-3 rounded-lg">
+                    <input type="checkbox" id="ex-${ex.id}" data-exercise-id="${ex.id}" class="exercise-checkbox h-5 w-5 rounded text-purple-600 focus:ring-purple-500 border-gray-300">
+                    <label for="ex-${ex.id}" class="ml-3 flex-1"><p class="font-semibold">${ex.Name}</p><p class="text-sm text-gray-500">${ex.Series} séries / ${ex.Reps} reps</p></label>
+                </div>`).join('');
+
+            document.getElementById('workout-modal').classList.add('active');
+            const startTime = Date.now();
+            workoutTimerInterval = setInterval(() => {
+                document.getElementById('workout-timer').textContent = formatTime(Math.floor((Date.now() - startTime) / 1000));
+            }, 1000);
+        };
+
+        const checkWorkoutCompletion = () => {
+            const allChecked = Array.from(document.querySelectorAll('#workout-todolist .exercise-checkbox')).every(cb => cb.checked);
+            document.getElementById('finish-workout-btn').disabled = !allChecked;
+        };
+
+        const finishWorkout = () => {
+            clearInterval(workoutTimerInterval);
+            currentWorkoutSession.EndTime = new Date().toISOString();
+            
+            appData.presenceHistory.push(currentWorkoutSession);
+            syncQueue.push({ 
+                action: 'append', 
+                sheet: GOOGLE_CONFIG.SHEETS.PRESENCE, 
+                data: [Object.values(currentWorkoutSession)]
+            });
+            
+            saveLocalData();
+            document.getElementById('workout-modal').classList.remove('active');
+            document.getElementById('cardio-prompt-modal').classList.add('active');
+            
+            render();
+            currentWorkoutSession = null;
+        };
+
+        // --- LÓGICA DE CARDIO ---
+        const startCardio = () => {
+            cardioStartTime = Date.now();
+            document.getElementById('cardio-timer-display').classList.remove('hidden');
+            document.getElementById('start-cardio-btn').classList.add('hidden');
+            document.getElementById('stop-cardio-btn').classList.remove('hidden');
+            document.getElementById('cardio-activity').disabled = true;
+
+            cardioTimerInterval = setInterval(() => {
+                document.getElementById('cardio-timer').textContent = formatTime(Math.floor((Date.now() - cardioStartTime) / 1000));
+            }, 1000);
+        };
+
+        const stopCardio = () => {
+            clearInterval(cardioTimerInterval);
+            const duration = Math.max(1, Math.round((Date.now() - cardioStartTime) / 60000));
+            const activity = document.getElementById('cardio-activity').value;
+            const cardioData = { 
+                id: `cardio_${crypto.randomUUID()}`,
+                Date: new Date().toISOString(), 
+                Activity: activity, 
+                Duration: duration 
+            };
+
+            appData.cardioHistory.push(cardioData);
+            syncQueue.push({ 
+                action: 'append', 
+                sheet: GOOGLE_CONFIG.SHEETS.CARDIO, 
+                data: [Object.values(cardioData)]
+            });
+            
+            saveLocalData();
+            alert(`Cardio de ${duration} minuto(s) registrado!`);
+            document.getElementById('cardio-timer-display').classList.add('hidden');
+            document.getElementById('start-cardio-btn').classList.remove('hidden');
+            document.getElementById('stop-cardio-btn').classList.add('hidden');
+            document.getElementById('cardio-activity').disabled = false;
+            render();
+        };
+
+        // --- NAVEGAÇÃO ---
+        const switchPage = (pageId) => {
+            pages.forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            navLinks.forEach(link => link.classList.toggle('active', link.dataset.page === pageId));
+        };
+
+        // --- MANIPULADORES DE EVENTOS ---
+        document.getElementById('add-exercise-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const workoutId = document.getElementById('exercise-workout').value;
+            const workout = appData.workouts.find(w => w.id === workoutId);
+            
+            const newExercise = { 
+                id: `ex_${crypto.randomUUID()}`,
+                Workout: workoutId,
+                Name: document.getElementById('exercise-name').value, 
+                Series: document.getElementById('exercise-series').value, 
+                Reps: document.getElementById('exercise-reps').value
+            };
+            
+            workout.exercises.push(newExercise);
+            syncQueue.push({ 
+                action: 'append', 
+                sheet: GOOGLE_CONFIG.SHEETS.EXERCISES, 
+                data: [[newExercise.id, newExercise.Workout, newExercise.Name, newExercise.Series, newExercise.Reps]]
+            });
+            
+            saveLocalData();
+            render();
+            e.target.reset();
+        });
+
+        document.getElementById('workouts-grid').addEventListener('click', (e) => {
+            const target = e.target.closest('[data-action="delete-exercise"]');
+            if (!target) return;
+
+            const { exerciseId } = target.dataset;
+            if (confirm('Tem certeza que deseja excluir este exercício?')) {
+                syncQueue.push({ action: 'delete', sheet: GOOGLE_CONFIG.SHEETS.EXERCISES, id: exerciseId });
+                appData.workouts.forEach(w => {
+                    w.exercises = w.exercises.filter(ex => ex.id !== exerciseId);
+                });
+                saveLocalData();
+                render();
+            }
+        });
+        
+        navLinks.forEach(link => link.addEventListener('click', () => switchPage(link.dataset.page)));
+        document.getElementById('presenca').addEventListener('click', (e) => {
+            if (e.target.closest('[data-action="start-workout"]')) {
+                startWorkout(e.target.closest('[data-action="start-workout"]').dataset.workoutId);
+            }
+        });
+        document.getElementById('workout-todolist').addEventListener('change', (e) => {
+            if (e.target.classList.contains('exercise-checkbox')) checkWorkoutCompletion();
+        });
+        document.getElementById('finish-workout-btn').addEventListener('click', finishWorkout);
+        document.getElementById('cardio-prompt-yes').addEventListener('click', () => {
+            document.getElementById('cardio-prompt-modal').classList.remove('active');
+            switchPage('cardio');
+        });
+        document.getElementById('cardio-prompt-no').addEventListener('click', () => {
+            document.getElementById('cardio-prompt-modal').classList.remove('active');
+        });
+        document.getElementById('start-cardio-btn').addEventListener('click', startCardio);
+        document.getElementById('stop-cardio-btn').addEventListener('click', stopCardio);
+        document.getElementById('sync-btn').addEventListener('click', syncData);
+
+        // --- LÓGICA DE SINCRONIZAÇÃO GOOGLE SHEETS ---
+
+        // Funções de inicialização chamadas pelos scripts do Google no <head>
+        window.gapiLoaded = () => gapi.load('client', initializeGapiClient);
+        window.gisLoaded = () => {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: GOOGLE_CONFIG.CLIENT_ID,
+                scope: 'https://www.googleapis.com/auth/spreadsheets',
+                callback: '', // Callback é definido dinamicamente
+            });
+            gisInited = true;
+            maybeEnableButtons();
+        };
+
+        async function initializeGapiClient() {
+            await gapi.client.init({
+                apiKey: GOOGLE_CONFIG.API_KEY,
+                discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+            });
+            gapiInited = true;
+            maybeEnableButtons();
+        }
+
+        function maybeEnableButtons() {
+            if (gapiInited && gisInited) {
+                document.getElementById('signin-button').style.display = 'block';
+            }
+        }
+        
+        function handleAuthClick() {
+            tokenClient.callback = async (resp) => {
+              if (resp.error !== undefined) throw (resp);
+              document.getElementById('signin-button').style.display = 'none';
+              document.getElementById('signout-button').style.display = 'block';
+              await syncData(); // Sincroniza logo após o login
+            };
+            if (gapi.client.getToken() === null) {
+                tokenClient.requestAccessToken({prompt: 'consent'});
+            } else {
+                tokenClient.requestAccessToken({prompt: ''});
+            }
+        }
+        
+        function handleSignoutClick() {
+            const token = gapi.client.getToken();
+            if (token !== null) {
+                google.accounts.oauth2.revoke(token.access_token);
+                gapi.client.setToken('');
+                document.getElementById('signin-button').style.display = 'block';
+                document.getElementById('signout-button').style.display = 'none';
+                updateSyncStatus();
+            }
+        }
+
+        async function syncData() {
+            if (isSyncing) { alert('Sincronização em andamento.'); return; }
+            if (!navigator.onLine) { alert('Você está offline.'); return; }
+            const token = gapi.client.getToken();
+            if (token === null) { 
+                alert('Faça login para sincronizar.'); // Este é o alerta que você viu!
+                return; 
+            }
+            
+            isSyncing = true;
+            render();
+
+            try {
+                // ETAPA 1: Enviar alterações locais (da fila) para a nuvem
+                const queue = [...syncQueue];
+                syncQueue = [];
+                
+                const deleteRequests = queue.filter(item => item.action === 'delete')
+                    .map(item => findAndDeleteRow(item.sheet, item.id));
+                await Promise.all(deleteRequests);
+
+                const appendActions = queue.filter(item => item.action === 'append');
+                const appendRequests = {};
+                appendActions.forEach(item => {
+                    if (!appendRequests[item.sheet]) appendRequests[item.sheet] = [];
+                    appendRequests[item.sheet].push(...item.data);
+                });
+
+                for (const sheetName in appendRequests) {
+                    await gapi.client.sheets.spreadsheets.values.append({
+                        spreadsheetId: GOOGLE_CONFIG.SPREADSHEET_ID,
+                        range: sheetName,
+                        valueInputOption: 'USER_ENTERED',
+                        resource: { values: appendRequests[sheetName] }
+                    });
+                }
+                
+                // ETAPA 2: Baixar todos os dados da nuvem
+                const ranges = Object.values(GOOGLE_CONFIG.SHEETS);
+                const response = await gapi.client.sheets.spreadsheets.values.batchGet({
+                    spreadsheetId: GOOGLE_CONFIG.SPREADSHEET_ID,
+                    ranges: ranges,
+                });
+                
+                // ETAPA 3: Atualizar dados locais com os da nuvem
+                const sheets = response.result.valueRanges;
+                const exercises = sheets.find(s => s.range.startsWith(GOOGLE_CONFIG.SHEETS.EXERCISES))?.values || [];
+                const presence = sheets.find(s => s.range.startsWith(GOOGLE_CONFIG.SHEETS.PRESENCE))?.values || [];
+                const cardio = sheets.find(s => s.range.startsWith(GOOGLE_CONFIG.SHEETS.CARDIO))?.values || [];
+                
+                appData.workouts.forEach(w => w.exercises = []);
+                exercises.forEach(row => {
+                    const [id, workoutId, name, series, reps] = row;
+                    const workout = appData.workouts.find(w => w.id === workoutId);
+                    if (workout) {
+                        workout.exercises.push({ id, Workout: workoutId, Name: name, Series: series, Reps: reps });
+                    }
+                });
+
+                appData.presenceHistory = presence.map(row => ({ id: row[0], WorkoutID: row[1], StartTime: row[2], EndTime: row[3] }));
+                
+                // ▼▼▼ LINHA CORRIGIDA ABAIXO ▼▼▼
+                appData.cardioHistory = cardio.map(row => ({ id: row[0], Date: row[1], Activity: row[2], Duration: parseInt(row[3], 10) || 0 }));
+
+                alert('Sincronização concluída com sucesso!');
+            } catch (error) {
+                console.error('Erro de sincronização:', error);
+                alert('Ocorreu um erro durante a sincronização. Veja o console para detalhes.');
+                syncQueue.push(...queue);
+            } finally {
+                isSyncing = false;
+                saveLocalData();
+                render();
+            }
+        }        // ...existing code...
+        document.getElementById('signin-button').addEventListener('click', handleAuthClick);
+        document.getElementById('signout-button').addEventListener('click', handleSignoutClick);
+        // ...existing code...        // ...existing code...
+
+
+        async function findAndDeleteRow(sheetName, recordId) {
+            // Pega a primeira coluna (onde devem estar os IDs)
+            const response = await gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: GOOGLE_CONFIG.SPREADSHEET_ID,
+                range: `${sheetName}!A:A`,
+            });
+
+            const rowToDelete = response.result.values?.findIndex(row => row[0] === recordId);
+            if (rowToDelete === -1 || rowToDelete === undefined) return; // Não encontrou, não faz nada
+            
+            const deleteRequest = {
+                deleteDimension: {
+                    range: {
+                        sheetId: await getSheetIdByName(sheetName),
+                        dimension: 'ROWS',
+                        startIndex: rowToDelete,
+                        endIndex: rowToDelete + 1
+                    }
+                }
+            };
+
+            await gapi.client.sheets.spreadsheets.batchUpdate({
+                spreadsheetId: GOOGLE_CONFIG.SPREADSHEET_ID,
+                resource: { requests: [deleteRequest] }
+            });
+        }
+        
+        let sheetIdMap = {};
+        async function getSheetIdByName(sheetName) {
+            if (sheetIdMap[sheetName]) return sheetIdMap[sheetName];
+
+            const response = await gapi.client.sheets.spreadsheets.get({
+                spreadsheetId: GOOGLE_CONFIG.SPREADSHEET_ID,
+            });
+            const sheet = response.result.sheets.find(s => s.properties.title === sheetName);
+            if (sheet) {
+                sheetIdMap[sheetName] = sheet.properties.sheetId;
+                return sheet.properties.sheetId;
+            }
+            throw new Error(`Aba da planilha "${sheetName}" não encontrada.`);
+        }
+
+        // --- INICIALIZAÇÃO DA APLICAÇÃO ---
+        window.addEventListener('load', () => {
+            loadLocalData();
+            switchPage('treinos');
+            render();
+            
+            // Lógica para sincronizar ao ficar online
+            window.addEventListener('online', () => {
+                const isSignedIn = typeof gapi !== 'undefined' && gapi.client?.getToken();
+                if (isSignedIn && syncQueue.length > 0) {
+                    alert('Você está online! Sincronizando dados pendentes...');
+                    syncData();
+                }
+            });
+        });
+
+        // Registrar o Service Worker para PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('Service Worker registrado!', reg))
+                .catch(err => console.log('Erro no registro do Service Worker:', err));
+        }
+
+    </script>
+
+</body>
+</html>
