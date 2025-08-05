@@ -511,42 +511,68 @@
             EndTime: null
         };
         
+        // Reset do estado do modal
+        const workoutModal = document.getElementById('workout-modal');
         const todolist = document.getElementById('workout-todolist');
+        const finishButton = document.getElementById('finish-workout-btn');
+        
         todolist.innerHTML = '';
+        finishButton.disabled = true;
+        finishButton.classList.remove('bg-purple-600');
+        finishButton.classList.add('bg-gray-400');
+        
+        // Criação dos exercícios
         workout.exercises.forEach((ex, index) => {
             const div = document.createElement('div');
-            div.className = 'flex items-center';
+            div.className = 'flex items-center p-2 hover:bg-gray-50';
             div.innerHTML = `
                 <input type="checkbox" id="ex-${index}" class="exercise-checkbox h-5 w-5 rounded text-purple-600 focus:ring-purple-500">
-                <label for="ex-${index}" class="ml-3 text-gray-700">${ex.Name} (${ex.Series}x ${ex.Reps})</label>
+                <label for="ex-${index}" class="ml-3 text-gray-700 flex-grow cursor-pointer">${ex.Name} (${ex.Series}x ${ex.Reps})</label>
             `;
             todolist.appendChild(div);
             
-            // Adiciona o evento de change diretamente no checkbox
+            // Adiciona o evento ao checkbox e à label para melhor UX
             const checkbox = div.querySelector('.exercise-checkbox');
+            const label = div.querySelector('label');
+            
             checkbox.addEventListener('change', checkWorkoutCompletion);
+            label.addEventListener('click', () => {
+                checkbox.checked = !checkbox.checked;
+                checkWorkoutCompletion();
+            });
         });
         
-        document.getElementById('workout-modal').classList.add('active');
+        // Inicializa o timer
         const timerEl = document.getElementById('workout-timer');
         let seconds = 0;
+        if (workoutTimerInterval) {
+            clearInterval(workoutTimerInterval);
+        }
         workoutTimerInterval = setInterval(() => {
             seconds++;
             timerEl.textContent = formatTime(seconds);
         }, 1000);
-
-        todolist.addEventListener('change', checkWorkoutCompletion);
+        
+        // Mostra o modal e verifica o estado inicial
+        workoutModal.classList.add('active');
         checkWorkoutCompletion();
     }
     
     function checkWorkoutCompletion() {
-        const checkboxes = document.querySelectorAll('#workout-todolist .exercise-checkbox');
-        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        const todolist = document.getElementById('workout-todolist');
+        const checkboxes = todolist.querySelectorAll('input[type="checkbox"]');
+        const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+        const total = checkboxes.length;
+        const allChecked = checkedCount === total;
+        
         const finishButton = document.getElementById('finish-workout-btn');
         if (finishButton) {
             finishButton.disabled = !allChecked;
+            finishButton.classList.toggle('bg-purple-600', allChecked);
+            finishButton.classList.toggle('bg-gray-400', !allChecked);
         }
-        console.log('Exercícios marcados:', Array.from(checkboxes).filter(cb => cb.checked).length, 'de', checkboxes.length);
+        
+        console.log(`Exercícios marcados: ${checkedCount} de ${total}`);
     }
 
     function startCardio() {
