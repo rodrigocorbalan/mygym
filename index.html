@@ -13,7 +13,6 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
 
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -62,10 +61,10 @@
     <div class="container mx-auto max-w-4xl p-4">
         
         <header class="text-center mb-6">
-        <div class="flex justify-center items-center gap-4">
-            <img src="logo-mygym.png" alt="MyGym Logo" class="h-16 w-auto">
-            <div id="sync-status" class="text-sm font-semibold p-2 rounded-lg"></div>
-        </div>
+            <div class="flex justify-center items-center gap-4">
+                <img src="logo-mygym.png" alt="MyGym Logo" class="h-16 w-auto">
+                <div id="sync-status" class="text-sm font-semibold p-2 rounded-lg"></div>
+            </div>
         </header>
 
         <nav class="bg-white rounded-lg shadow-sm p-2 flex justify-around mb-8">
@@ -77,7 +76,6 @@
 
         <main>
             <section id="treinos" class="page">
-            
               <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
                 <h2 class="text-xl font-bold mb-4">Adicionar Novo Exercício</h2>
                 <form id="add-exercise-form" class="grid md:grid-cols-4 gap-4 items-end">
@@ -130,9 +128,9 @@
                      </div>
                      <form id="add-cardio-form" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                          <select id="cardio-activity" class="p-2 border rounded-md bg-white md:col-span-2">
-                             <option>Esteira 🏃</option>
-                             <option>Bicicleta 🚴</option>
-                             <option>Elíptico 🏃‍♀️</option>
+                             <option>Esteira</option>
+                             <option>Bicicleta</option>
+                             <option>Elíptico</option>
                              <option>Outro</option>
                          </select>
                          <button type="button" id="start-cardio-btn" class="bg-green-500 text-white p-2 rounded-md font-semibold hover:bg-green-600 transition-colors">Iniciar Cardio</button>
@@ -157,12 +155,12 @@
                 <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
                     <h2 class="text-xl font-bold mb-4">Estatísticas</h2>
                     <div class="grid md:grid-cols-2 gap-6">
-<div>
-    <h3 class="font-semibold mb-2">Distribuição de Treinos</h3>
-    <div class="relative h-72 w-full">
-        <canvas id="workout-chart"></canvas>
-    </div>
-</div>
+                        <div>
+                            <h3 class="font-semibold mb-2">Distribuição de Treinos</h3>
+                            <div class="relative h-72 w-full">
+                                <canvas id="workout-chart"></canvas>
+                            </div>
+                        </div>
                         <div>
                             <h3 class="font-semibold mb-2">Resumo do Histórico</h3>
                             <div id="stats-summary" class="space-y-2"></div>
@@ -196,11 +194,14 @@
         </div>
     </div>
 
-    <script>
+<script>
+    // =========================================================================
+    // CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
+    // =========================================================================
+    
     // --- COLE A URL DO SEU APP SCRIPT AQUI ---
-    const APPS_SCRIPT_URL = 'COLE_AQUI_A_URL_DO_SEU_APP_DA_WEB';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwVhQmjpMq_7EZqCUXINMMuPD9y7GucppXFa1cNu--hsFOGm4O0k5FH74k9Guz1IL4ZwQ/exec';
 
-    // --- CONFIGURAÇÃO INICIAL (Simplificada) ---
     const pages = document.querySelectorAll('.page');
     const navLinks = document.querySelectorAll('.nav-link');
     let workoutChartInstance = null;
@@ -222,62 +223,48 @@
     
     let appData = {};
 
-    // --- FUNÇÕES DE DADOS (localStorage) ---
+    // =========================================================================
+    // FUNÇÕES DE DADOS (LOCALSTORAGE)
+    // =========================================================================
     const saveLocalData = () => {
         localStorage.setItem('myGymData', JSON.stringify(appData));
     };
+
     const loadLocalData = () => {
         const data = localStorage.getItem('myGymData');
         appData = data ? JSON.parse(data) : JSON.parse(JSON.stringify(defaultData));
+        render(); // Renderiza a UI assim que os dados locais são carregados
     };
     
-    // --- FUNÇÕES DE UTILIDADE ---
-    const formatTime = (seconds) => {
-        const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
-        const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
-        const s = (seconds % 60).toString().padStart(2, '0');
-        return `${h}:${m}:${s}`;
-    };
-
-    const updateSyncStatus = () => {
-        const statusEl = document.getElementById('sync-status');
-        if (isSyncing) {
-            statusEl.textContent = 'Sincronizando...';
-            statusEl.className = 'text-sm font-semibold p-2 rounded-lg text-blue-700 bg-blue-100 syncing';
-        } else {
-            const lastSync = localStorage.getItem('myGymLastSync');
-            statusEl.textContent = lastSync ? `Sincronizado: ${new Date(lastSync).toLocaleString('pt-BR')}` : 'Pronto';
-            statusEl.className = 'text-sm font-semibold p-2 rounded-lg text-green-700 bg-green-100';
-        }
-    };
-    
-    // --- LÓGICA DE SINCRONIZAÇÃO (Nova e Simplificada) ---
+    // =========================================================================
+    // LÓGICA DE SINCRONIZAÇÃO (APPS SCRIPT)
+    // =========================================================================
     async function syncData() {
-        if (isSyncing) { alert('Sincronização em andamento.'); return; }
+        if (isSyncing) { return; }
         if (!navigator.onLine) { alert('Você está offline. Não é possível sincronizar.'); return; }
 
         isSyncing = true;
-        render();
+        updateSyncStatus();
 
         try {
             const response = await fetch(APPS_SCRIPT_URL);
-            if (!response.ok) {
-                throw new Error(`Erro na rede: ${response.statusText}`);
-            }
+            if (!response.ok) { throw new Error(`Erro na rede: ${response.statusText}`); }
             const remoteData = await response.json();
 
-            // Atualizar dados locais com os da nuvem
+            // Atualiza os dados locais com os da nuvem
             appData.workouts.forEach(w => w.exercises = []);
-            remoteData.exercises.forEach(row => {
-                const [id, workoutId, name, series, reps] = row;
-                const workout = appData.workouts.find(w => w.id === workoutId);
-                if (workout) {
-                    workout.exercises.push({ id, Workout: workoutId, Name: name, Series: series, Reps: reps });
-                }
-            });
+            if (remoteData.exercises) {
+                remoteData.exercises.forEach(row => {
+                    const [id, workoutId, name, series, reps] = row;
+                    const workout = appData.workouts.find(w => w.id === workoutId);
+                    if (workout) {
+                        workout.exercises.push({ id, Workout: workoutId, Name: name, Series: series, Reps: reps });
+                    }
+                });
+            }
 
-            appData.presenceHistory = remoteData.presenceHistory.map(row => ({ id: row[0], WorkoutID: row[1], StartTime: row[2], EndTime: row[3] }));
-            appData.cardioHistory = remoteData.cardioHistory.map(row => ({ id: row[0], Date: row[1], Activity: row[2], Duration: parseInt(row[3], 10) || 0 }));
+            appData.presenceHistory = remoteData.presenceHistory ? remoteData.presenceHistory.map(row => ({ id: row[0], WorkoutID: row[1], StartTime: row[2], EndTime: row[3] })) : [];
+            appData.cardioHistory = remoteData.cardioHistory ? remoteData.cardioHistory.map(row => ({ id: row[0], Date: row[1], Activity: row[2], Duration: parseInt(row[3], 10) || 0 })) : [];
             
             localStorage.setItem('myGymLastSync', new Date().toISOString());
             alert('Sincronização concluída com sucesso!');
@@ -291,56 +278,245 @@
         }
     }
     
-    /**
-     * Função genérica para enviar dados para o Apps Script
-     * @param {string} action - O nome da ação a ser executada no script (ex: 'addExercise')
-     * @param {object} data - O objeto com os dados a serem enviados
-     */
     async function sendData(action, data) {
         if (!navigator.onLine) {
-            // Se estiver offline, não tenta enviar e avisa o utilizador.
-            // Os dados já foram salvos localmente, então serão sincronizados depois.
             console.log('Offline. Ação será sincronizada mais tarde.');
             return;
         }
-
         try {
-            // Criamos um novo objeto FormData para a requisição.
-            // O Apps Script lida melhor com este formato para POST.
             const formData = new FormData();
             formData.append('action', action);
             formData.append('data', JSON.stringify(data));
             
-            // Note que 'mode: no-cors' foi removido.
-            const response = await fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                // Se a resposta da rede não for bem-sucedida (ex: erro 500)
-                throw new Error(`Erro de rede: ${response.statusText}`);
-            }
-
-            const result = await response.json(); // Lê a resposta JSON do script
-            
-            if (result.error) {
-                // Se o nosso script retornou uma mensagem de erro
-                throw new Error(`Erro no Apps Script: ${result.error}`);
-            }
-
-            // Se chegamos aqui, tudo correu bem.
+            const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: formData });
+            if (!response.ok) { throw new Error(`Erro de rede: ${response.statusText}`); }
+            const result = await response.json(); 
+            if (result.error) { throw new Error(`Erro no Apps Script: ${result.error}`); }
             console.log('Apps Script respondeu:', result.message || 'Sucesso!');
-
         } catch (error) {
             console.error(`Erro ao enviar dados para a ação ${action}:`, error);
-            // Podemos opcionalmente alertar o utilizador sobre a falha na sincronização
-            // alert('Ocorreu uma falha ao salvar os dados na nuvem. Eles estão salvos localmente.');
         }
     }
+
+    // =========================================================================
+    // LÓGICA DE RENDERIZAÇÃO E UI (FUNÇÕES QUE ESTAVAM EM FALTA)
+    // =========================================================================
+    const formatTime = (seconds) => {
+        const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+        const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+        const s = (seconds % 60).toString().padStart(2, '0');
+        return `${h}:${m}:${s}`;
+    };
+
+    const updateSyncStatus = () => {
+        const statusEl = document.getElementById('sync-status');
+        if (!statusEl) return;
+        if (isSyncing) {
+            statusEl.textContent = 'Sincronizando...';
+            statusEl.className = 'text-sm font-semibold p-2 rounded-lg text-blue-700 bg-blue-100 syncing';
+        } else {
+            const lastSync = localStorage.getItem('myGymLastSync');
+            statusEl.textContent = lastSync ? `Sinc.: ${new Date(lastSync).toLocaleTimeString('pt-BR')}` : 'Pronto';
+            statusEl.className = 'text-sm font-semibold p-2 rounded-lg text-green-700 bg-green-100';
+        }
+    };
     
-    // --- ATUALIZAR MANIPULADORES DE EVENTOS ---
+    function switchPage(pageId) {
+        pages.forEach(p => p.classList.remove('active'));
+        navLinks.forEach(l => l.classList.remove('active'));
+
+        const newPage = document.getElementById(pageId);
+        const newLink = document.querySelector(`.nav-link[data-page="${pageId}"]`);
+
+        if(newPage) newPage.classList.add('active');
+        if(newLink) newLink.classList.add('active');
+    }
+
+    function renderWorkouts() {
+        const grid = document.getElementById('workouts-grid');
+        grid.innerHTML = '';
+        appData.workouts.forEach(workout => {
+            const exercisesHTML = workout.exercises.map(ex => `
+                <li class="flex justify-between items-center text-sm">
+                    <span>${ex.Name} (${ex.Series}x ${ex.Reps})</span>
+                    <button data-action="delete-exercise" data-exercise-id="${ex.id}" class="text-red-500 hover:text-red-700">&times;</button>
+                </li>
+            `).join('');
+            
+            const cardHTML = `
+                <div class="bg-white p-4 rounded-lg shadow-sm">
+                    <h3 class="font-bold text-lg mb-2">Treino ${workout.id}</h3>
+                    <ul class="space-y-2">${exercisesHTML || '<li class="text-sm text-gray-500">Nenhum exercício adicionado.</li>'}</ul>
+                </div>
+            `;
+            grid.innerHTML += cardHTML;
+        });
+    }
+
+    function renderPresenceHistory() {
+        const presenceContainer = document.getElementById('presence-history');
+        presenceContainer.innerHTML = '';
+        const history = [...appData.presenceHistory].reverse(); // Mostra mais recentes primeiro
+        if(history.length === 0){
+            presenceContainer.innerHTML = '<li>Nenhum registro de presença.</li>';
+            return;
+        }
+        history.forEach(p => {
+            const startDate = new Date(p.StartTime);
+            const endDate = new Date(p.EndTime);
+            const durationMs = endDate - startDate;
+            const durationMinutes = Math.round(durationMs / 60000);
+            const li = document.createElement('li');
+            li.className = 'bg-gray-100 p-3 rounded-md text-sm';
+            li.innerHTML = `<strong>Treino ${p.WorkoutID}</strong> em ${startDate.toLocaleDateString('pt-BR')} - Duração: ${durationMinutes} min`;
+            presenceContainer.appendChild(li);
+        });
+    }
+
+    function renderCardioHistory() {
+        const cardioContainer = document.getElementById('cardio-history');
+        cardioContainer.innerHTML = '';
+        const history = [...appData.cardioHistory].reverse();
+        if(history.length === 0){
+            cardioContainer.innerHTML = '<li>Nenhum registro de cardio.</li>';
+            return;
+        }
+        history.forEach(c => {
+            const li = document.createElement('li');
+            li.className = 'bg-gray-100 p-3 rounded-md text-sm';
+            li.innerHTML = `<strong>${c.Activity}</strong> em ${new Date(c.Date).toLocaleDateString('pt-BR')} - Duração: ${c.Duration} min`;
+            cardioContainer.appendChild(li);
+        });
+    }
+
+    function renderStats() {
+        // Resumo
+        const summaryEl = document.getElementById('stats-summary');
+        const totalWorkouts = appData.presenceHistory.length;
+        const totalCardioMins = appData.cardioHistory.reduce((sum, c) => sum + c.Duration, 0);
+        summaryEl.innerHTML = `
+            <p><strong>Total de Treinos:</strong> ${totalWorkouts}</p>
+            <p><strong>Total de Minutos de Cardio:</strong> ${totalCardioMins}</p>
+        `;
+
+        // Gráfico
+        const ctx = document.getElementById('workout-chart').getContext('2d');
+        if (workoutChartInstance) {
+            workoutChartInstance.destroy();
+        }
+        const workoutCounts = appData.presenceHistory.reduce((acc, p) => {
+            acc[p.WorkoutID] = (acc[p.WorkoutID] || 0) + 1;
+            return acc;
+        }, {});
+        
+        workoutChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(workoutCounts),
+                datasets: [{
+                    label: 'Treinos Realizados',
+                    data: Object.values(workoutCounts),
+                    backgroundColor: ['#8b5cf6', '#10b981', '#3b82f6'],
+                }]
+            }
+        });
+    }
     
+    function renderPresenceButtons() {
+        const container = document.getElementById('presence-buttons');
+        container.innerHTML = '';
+        const lastWorkout = appData.presenceHistory.length > 0 ? appData.presenceHistory[appData.presenceHistory.length-1].WorkoutID : 'C';
+        let suggestedWorkoutId = 'A';
+        if(lastWorkout === 'A') suggestedWorkoutId = 'B';
+        if(lastWorkout === 'B') suggestedWorkoutId = 'C';
+        
+        appData.workouts.forEach(w => {
+            const isSuggested = w.id === suggestedWorkoutId;
+            const button = document.createElement('button');
+            button.className = `w-full p-4 rounded-lg font-bold text-white transition-transform duration-200 hover:scale-105 ${isSuggested ? 'suggested-glow' : ''}`;
+            button.textContent = `Iniciar Treino ${w.id}`;
+            button.dataset.workoutId = w.id;
+            button.style.backgroundColor = w.id === 'A' ? '#3b82f6' : w.id === 'B' ? '#10b981' : '#8b5cf6';
+            button.onclick = () => startWorkout(w.id);
+            container.appendChild(button);
+        });
+    }
+    
+    function render() {
+        if (!appData || !appData.workouts) return;
+        renderWorkouts();
+        renderPresenceHistory();
+        renderCardioHistory();
+        renderStats();
+        renderPresenceButtons();
+        updateSyncStatus();
+    }
+
+    // =========================================================================
+    // LÓGICA DE AÇÕES E EVENTOS
+    // =========================================================================
+    function startWorkout(workoutId) {
+        const workout = appData.workouts.find(w => w.id === workoutId);
+        if(!workout || workout.exercises.length === 0) {
+            alert('Este treino não tem exercícios! Adicione exercícios na aba "Treinos".');
+            return;
+        }
+
+        currentWorkoutSession = {
+            id: `p_${crypto.randomUUID()}`,
+            WorkoutID: workoutId,
+            StartTime: new Date().toISOString(),
+            EndTime: null
+        };
+        
+        const todolist = document.getElementById('workout-todolist');
+        todolist.innerHTML = '';
+        workout.exercises.forEach((ex, index) => {
+            todolist.innerHTML += `
+                <div class="flex items-center">
+                    <input type="checkbox" id="ex-${index}" class="exercise-checkbox h-5 w-5 rounded text-purple-600 focus:ring-purple-500">
+                    <label for="ex-${index}" class="ml-3 text-gray-700">${ex.Name} (${ex.Series}x ${ex.Reps})</label>
+                </div>
+            `;
+        });
+        
+        document.getElementById('workout-modal').classList.add('active');
+        const timerEl = document.getElementById('workout-timer');
+        let seconds = 0;
+        workoutTimerInterval = setInterval(() => {
+            seconds++;
+            timerEl.textContent = formatTime(seconds);
+        }, 1000);
+
+        todolist.addEventListener('change', checkWorkoutCompletion);
+        checkWorkoutCompletion();
+    }
+    
+    function checkWorkoutCompletion() {
+        const checkboxes = document.querySelectorAll('.exercise-checkbox');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        document.getElementById('finish-workout-btn').disabled = !allChecked;
+    }
+
+    function startCardio() {
+        cardioStartTime = Date.now();
+        const timerEl = document.getElementById('cardio-timer');
+        document.getElementById('cardio-timer-display').classList.remove('hidden');
+        document.getElementById('start-cardio-btn').classList.add('hidden');
+        document.getElementById('stop-cardio-btn').classList.remove('hidden');
+        document.getElementById('cardio-activity').disabled = true;
+
+        cardioTimerInterval = setInterval(() => {
+            const elapsedSeconds = Math.floor((Date.now() - cardioStartTime) / 1000);
+            timerEl.textContent = formatTime(elapsedSeconds);
+        }, 1000);
+    }
+    
+    // --- MANIPULADORES DE EVENTOS (Handlers) ---
+    navLinks.forEach(link => {
+        link.addEventListener('click', () => switchPage(link.dataset.page));
+    });
+
     document.getElementById('add-exercise-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const workoutId = document.getElementById('exercise-workout').value;
@@ -354,44 +530,33 @@
             reps: document.getElementById('exercise-reps').value
         };
         
-        // Adiciona localmente para feedback instantâneo
         workout.exercises.push({ id: newExercise.id, Workout: newExercise.workout, Name: newExercise.name, Series: newExercise.series, Reps: newExercise.reps });
         saveLocalData();
         render();
         e.target.reset();
-        
-        // Envia para a nuvem em segundo plano
         await sendData('addExercise', newExercise);
     });
 
     document.getElementById('workouts-grid').addEventListener('click', async (e) => {
         const target = e.target.closest('[data-action="delete-exercise"]');
         if (!target) return;
-
         const { exerciseId } = target.dataset;
         if (confirm('Tem certeza que deseja excluir este exercício?')) {
-            // Remove localmente para feedback instantâneo
             appData.workouts.forEach(w => {
                 w.exercises = w.exercises.filter(ex => ex.id !== exerciseId);
             });
             saveLocalData();
             render();
-            
-            // Envia para a nuvem em segundo plano
             await sendData('deleteExercise', { id: exerciseId });
         }
     });
 
-    const finishWorkout = async () => {
+    document.getElementById('finish-workout-btn').addEventListener('click', async () => {
         clearInterval(workoutTimerInterval);
         currentWorkoutSession.EndTime = new Date().toISOString();
-        
-        // Adiciona localmente para feedback instantâneo
         appData.presenceHistory.push(currentWorkoutSession);
         saveLocalData();
-        render();
         
-        // Envia para a nuvem em segundo plano
         const dataToSend = {
             id: currentWorkoutSession.id,
             workoutId: currentWorkoutSession.WorkoutID,
@@ -403,9 +568,11 @@
         document.getElementById('workout-modal').classList.remove('active');
         document.getElementById('cardio-prompt-modal').classList.add('active');
         currentWorkoutSession = null;
-    };
-
-    const stopCardio = async () => {
+        render();
+    });
+    
+    document.getElementById('start-cardio-btn').addEventListener('click', startCardio);
+    document.getElementById('stop-cardio-btn').addEventListener('click', async () => {
         clearInterval(cardioTimerInterval);
         const duration = Math.max(1, Math.round((Date.now() - cardioStartTime) / 60000));
         const activity = document.getElementById('cardio-activity').value;
@@ -416,12 +583,9 @@
             duration: duration 
         };
 
-        // Adiciona localmente para feedback instantâneo
         appData.cardioHistory.push({ id: cardioData.id, Date: cardioData.date, Activity: cardioData.activity, Duration: cardioData.duration });
         saveLocalData();
         render();
-
-        // Envia para a nuvem em segundo plano
         await sendData('addCardio', cardioData);
 
         alert(`Cardio de ${duration} minuto(s) registrado!`);
@@ -429,24 +593,27 @@
         document.getElementById('start-cardio-btn').classList.remove('hidden');
         document.getElementById('stop-cardio-btn').classList.add('hidden');
         document.getElementById('cardio-activity').disabled = false;
-    };
+    });
+    
+    document.getElementById('cardio-prompt-yes').addEventListener('click', () => {
+        document.getElementById('cardio-prompt-modal').classList.remove('active');
+        switchPage('cardio');
+        startCardio();
+    });
+    document.getElementById('cardio-prompt-no').addEventListener('click', () => {
+        document.getElementById('cardio-prompt-modal').classList.remove('active');
+    });
 
-    // --- LÓGICA DE RENDERIZAÇÃO E NAVEGAÇÃO (A MAIORIA PERMANECE IGUAL) ---
-    // (O restante do seu código de render, navegação e lógica de treino pode ser mantido aqui)
-    // ... cole o resto do seu JS (render, switchPage, startWorkout, checkWorkoutCompletion, startCardio, etc.)
-    // A única alteração é no botão de sincronização:
     document.getElementById('sync-btn').addEventListener('click', syncData);
 
-    // --- INICIALIZAÇÃO DA APLICAÇÃO ---
+    // =========================================================================
+    // INICIALIZAÇÃO DA APLICAÇÃO
+    // =========================================================================
     window.addEventListener('load', () => {
         loadLocalData();
         switchPage('presenca');
-        render();
-        // Sincroniza os dados da nuvem ao carregar a página
         syncData();
     });
-    
-    // (O restante do seu código, como renderWorkouts, renderPresence, etc., pode ser mantido como está)
 </script>
 
 </body>
