@@ -199,7 +199,7 @@
     // CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
     // =========================================================================
 
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby1a2niRRoL5dRdWWUflQcJ20z3sUQjY41uKS2o51wumryJA6It_7th8iofDsNdqBQLYQ/exec';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5bnfbzH_VdnOnzmxAwJ-L74s4GYs_ZR5hgE5_W3Ocl8N94xGx_NlshhH99xZ8LN57/exec';
 
     const pages = document.querySelectorAll('.page');
     const navLinks = document.querySelectorAll('.nav-link');
@@ -248,7 +248,13 @@
         updateSyncStatus();
 
         try {
-            const response = await fetch(APPS_SCRIPT_URL);
+            const response = await fetch(APPS_SCRIPT_URL, {
+                method: 'GET',
+                mode: 'cors',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
             if (!response.ok) { throw new Error(`Erro na rede: ${response.statusText}`); }
             const remoteData = await response.json();
 
@@ -289,13 +295,29 @@
             formData.append('action', action);
             formData.append('data', JSON.stringify(data));
             
-            const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: formData });
-            if (!response.ok) { throw new Error(`Erro de rede: ${response.statusText}`); }
+            const response = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'cors',
+                body: formData,
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Resposta do servidor:', errorText);
+                throw new Error(`Erro de rede: ${response.statusText}`);
+            }
+            
             const result = await response.json(); 
             if (result.error) { throw new Error(`Erro no Apps Script: ${result.error}`); }
             console.log('Apps Script respondeu:', result.message || 'Sucesso!');
+            return result;
         } catch (error) {
             console.error(`Erro ao enviar dados para a ação ${action}:`, error);
+            alert(`Erro ao sincronizar: ${error.message}`);
+            throw error;
         }
     }
 
