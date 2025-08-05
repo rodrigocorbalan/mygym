@@ -198,7 +198,7 @@
     // =========================================================================
     // CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
     // =========================================================================
- 
+
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby1a2niRRoL5dRdWWUflQcJ20z3sUQjY41uKS2o51wumryJA6It_7th8iofDsNdqBQLYQ/exec';
 
     const pages = document.querySelectorAll('.page');
@@ -457,7 +457,7 @@
     // =========================================================================
     // LÓGICA DE AÇÕES E EVENTOS
     // =========================================================================
-    
+
     function startWorkout(workoutId) {
         const workout = appData.workouts.find(w => w.id === workoutId);
         if(!workout || workout.exercises.length === 0) {
