@@ -199,7 +199,7 @@
     // CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
     // =========================================================================
 
-    const APPS_SCRIPT_URL = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehGKLhrFlAyoz2XGiBMKfw1DnSAzgMoacw5pdotAz_5Huvct-lIF3W5rZqYQsCbyGCJgXdjcNFHFVQj3Frk0urp_yWCR4PWzEiM0ULi1cdYDyctBUC7HcTIB5tBH-tW_BzCqgzJoBgSwd4&lib=MN667xS_08K0ipGnGDuJxplT-ECbVFww8';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5bnfbzH_VdnOnzmxAwJ-L74s4GYs_ZR5hgE5_W3Ocl8N94xGx_NlshhH99xZ8LN57/exec';
 
     const pages = document.querySelectorAll('.page');
     const navLinks = document.querySelectorAll('.nav-link');
@@ -248,21 +248,24 @@
         updateSyncStatus();
 
         try {
-            const response = await fetch(`${APPS_SCRIPT_URL}?timestamp=${Date.now()}`, {
-                method: 'GET',
-                mode: 'cors',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                },
-                redirect: 'follow'
+            const response = await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                const callbackName = 'jsonpCallback_' + Date.now();
+                window[callbackName] = (data) => {
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                    resolve(data);
+                };
+                script.onerror = () => {
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                    reject(new Error('Falha ao carregar dados'));
+                };
+                script.src = `${APPS_SCRIPT_URL}?callback=${callbackName}&timestamp=${Date.now()}`;
+                document.body.appendChild(script);
             });
             
-            if (!response.ok) {
-                console.error('Resposta do servidor:', await response.text());
-                throw new Error(`Erro na rede: ${response.statusText}`);
-            }
-            const remoteData = await response.json();
+            const remoteData = response;
 
             // Atualiza os dados locais com os da nuvem
             appData.workouts.forEach(w => w.exercises = []);
@@ -301,14 +304,21 @@
             params.append('action', action);
             params.append('data', JSON.stringify(data));
             
-            const response = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`, {
-                method: 'POST',
-                mode: 'cors',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                redirect: 'follow'
+            const response = await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                const callbackName = 'jsonpCallback_' + Date.now();
+                window[callbackName] = (data) => {
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                    resolve(data);
+                };
+                script.onerror = () => {
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                    reject(new Error('Falha ao enviar dados'));
+                };
+                script.src = `${APPS_SCRIPT_URL}?${params.toString()}&callback=${callbackName}`;
+                document.body.appendChild(script);
             });
             
             if (!response.ok) {
