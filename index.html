@@ -198,9 +198,8 @@
     // =========================================================================
     // CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
     // =========================================================================
-    
-    // --- COLE A URL DO SEU APP SCRIPT AQUI ---
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwVhQmjpMq_7EZqCUXINMMuPD9y7GucppXFa1cNu--hsFOGm4O0k5FH74k9Guz1IL4ZwQ/exec';
+ 
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby1a2niRRoL5dRdWWUflQcJ20z3sUQjY41uKS2o51wumryJA6It_7th8iofDsNdqBQLYQ/exec';
 
     const pages = document.querySelectorAll('.page');
     const navLinks = document.querySelectorAll('.nav-link');
@@ -226,6 +225,7 @@
     // =========================================================================
     // FUNÇÕES DE DADOS (LOCALSTORAGE)
     // =========================================================================
+
     const saveLocalData = () => {
         localStorage.setItem('myGymData', JSON.stringify(appData));
     };
@@ -239,6 +239,7 @@
     // =========================================================================
     // LÓGICA DE SINCRONIZAÇÃO (APPS SCRIPT)
     // =========================================================================
+
     async function syncData() {
         if (isSyncing) { return; }
         if (!navigator.onLine) { alert('Você está offline. Não é possível sincronizar.'); return; }
@@ -301,6 +302,7 @@
     // =========================================================================
     // LÓGICA DE RENDERIZAÇÃO E UI (FUNÇÕES QUE ESTAVAM EM FALTA)
     // =========================================================================
+
     const formatTime = (seconds) => {
         const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
         const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
@@ -455,6 +457,7 @@
     // =========================================================================
     // LÓGICA DE AÇÕES E EVENTOS
     // =========================================================================
+    
     function startWorkout(workoutId) {
         const workout = appData.workouts.find(w => w.id === workoutId);
         if(!workout || workout.exercises.length === 0) {
