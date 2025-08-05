@@ -514,12 +514,17 @@
         const todolist = document.getElementById('workout-todolist');
         todolist.innerHTML = '';
         workout.exercises.forEach((ex, index) => {
-            todolist.innerHTML += `
-                <div class="flex items-center">
-                    <input type="checkbox" id="ex-${index}" class="exercise-checkbox h-5 w-5 rounded text-purple-600 focus:ring-purple-500">
-                    <label for="ex-${index}" class="ml-3 text-gray-700">${ex.Name} (${ex.Series}x ${ex.Reps})</label>
-                </div>
+            const div = document.createElement('div');
+            div.className = 'flex items-center';
+            div.innerHTML = `
+                <input type="checkbox" id="ex-${index}" class="exercise-checkbox h-5 w-5 rounded text-purple-600 focus:ring-purple-500">
+                <label for="ex-${index}" class="ml-3 text-gray-700">${ex.Name} (${ex.Series}x ${ex.Reps})</label>
             `;
+            todolist.appendChild(div);
+            
+            // Adiciona o evento de change diretamente no checkbox
+            const checkbox = div.querySelector('.exercise-checkbox');
+            checkbox.addEventListener('change', checkWorkoutCompletion);
         });
         
         document.getElementById('workout-modal').classList.add('active');
@@ -535,9 +540,13 @@
     }
     
     function checkWorkoutCompletion() {
-        const checkboxes = document.querySelectorAll('.exercise-checkbox');
+        const checkboxes = document.querySelectorAll('#workout-todolist .exercise-checkbox');
         const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-        document.getElementById('finish-workout-btn').disabled = !allChecked;
+        const finishButton = document.getElementById('finish-workout-btn');
+        if (finishButton) {
+            finishButton.disabled = !allChecked;
+        }
+        console.log('Exercícios marcados:', Array.from(checkboxes).filter(cb => cb.checked).length, 'de', checkboxes.length);
     }
 
     function startCardio() {
