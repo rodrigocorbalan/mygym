@@ -531,14 +531,11 @@
             `;
             todolist.appendChild(div);
             
-            // Adiciona o evento ao checkbox e à label para melhor UX
+            // Adiciona o evento apenas ao checkbox
             const checkbox = div.querySelector('.exercise-checkbox');
-            const label = div.querySelector('label');
-            
-            checkbox.addEventListener('change', checkWorkoutCompletion);
-            label.addEventListener('click', () => {
-                checkbox.checked = !checkbox.checked;
-                checkWorkoutCompletion();
+            checkbox.addEventListener('change', () => {
+                // Pequeno delay para garantir que o estado do checkbox foi atualizado
+                setTimeout(checkWorkoutCompletion, 0);
             });
         });
         
@@ -559,20 +556,41 @@
     }
     
     function checkWorkoutCompletion() {
-        const todolist = document.getElementById('workout-todolist');
-        const checkboxes = todolist.querySelectorAll('input[type="checkbox"]');
-        const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-        const total = checkboxes.length;
-        const allChecked = checkedCount === total;
-        
-        const finishButton = document.getElementById('finish-workout-btn');
-        if (finishButton) {
-            finishButton.disabled = !allChecked;
-            finishButton.classList.toggle('bg-purple-600', allChecked);
-            finishButton.classList.toggle('bg-gray-400', !allChecked);
-        }
-        
-        console.log(`Exercícios marcados: ${checkedCount} de ${total}`);
+        try {
+            const todolist = document.getElementById('workout-todolist');
+            if (!todolist) {
+                console.error('Elemento workout-todolist não encontrado');
+                return;
+            }
+
+            const checkboxes = todolist.querySelectorAll('.exercise-checkbox');
+            if (checkboxes.length === 0) {
+                console.error('Nenhum checkbox encontrado');
+                return;
+            }
+
+            const total = checkboxes.length;
+            const checkedCount = Array.from(checkboxes).reduce((count, cb) => count + (cb.checked ? 1 : 0), 0);
+            const allChecked = checkedCount === total;
+            
+            const finishButton = document.getElementById('finish-workout-btn');
+            if (finishButton) {
+                finishButton.disabled = !allChecked;
+                if (allChecked) {
+                    finishButton.classList.remove('bg-gray-400');
+                    finishButton.classList.add('bg-purple-600');
+                } else {
+                    finishButton.classList.remove('bg-purple-600');
+                    finishButton.classList.add('bg-gray-400');
+                }
+            } else {
+                console.error('Botão finish-workout-btn não encontrado');
+            }
+            
+            console.log(`Exercícios marcados: ${checkedCount} de ${total} (${allChecked ? 'Completo' : 'Incompleto'})`);
+        } catch (error) {
+            console.error('Erro ao verificar conclusão do treino:', error);
+        };
     }
 
     function startCardio() {
