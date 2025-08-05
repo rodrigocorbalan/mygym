@@ -250,10 +250,7 @@
         try {
             const response = await fetch(APPS_SCRIPT_URL, {
                 method: 'GET',
-                mode: 'cors',
-                headers: {
-                    'Accept': 'application/json'
-                }
+                mode: 'no-cors'
             });
             if (!response.ok) { throw new Error(`Erro na rede: ${response.statusText}`); }
             const remoteData = await response.json();
@@ -297,11 +294,8 @@
             
             const response = await fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
-                mode: 'cors',
-                body: formData,
-                headers: {
-                    'Accept': 'application/json'
-                }
+                mode: 'no-cors',
+                body: formData
             });
             
             if (!response.ok) {
