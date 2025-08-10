@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyGym</title>
+    <meta name="description" content="MyGym - Gerencie seus treinos com foco.">
+    <meta name="theme-color" content="#ffffff"/>
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/8f44fd/ffffff?text=Gym">
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .nav-link.active { background-color: #f3e8ff; color: #8f44fd; font-weight: 600; }
+        .suggested-glow { box-shadow: 0 0 15px 2px rgba(143, 68, 253, 0.7); }
+        .modal-overlay { display: none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 50; }
+        .modal-overlay.active { display: flex; }
+        .exercise-checkbox:checked + label { text-decoration: line-through; color: #9ca3af; }
+        #sync-status.syncing { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 50% { opacity: .5; } }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto max-w-4xl p-4">
+        <header class="text-center mb-6">
+            <div class="flex justify-center items-center gap-4">
+                <img src="logo-mygym.png" alt="MyGym Logo" class="h-16 w-auto">
+                <div id="sync-status" class="text-sm font-semibold p-2 rounded-lg"></div>
+            </div>
+        </header>
+
+        <nav class="bg-white rounded-lg shadow-sm p-2 flex justify-around mb-8">
+            <button data-page="presenca" class="nav-link flex-1 text-center p-2 rounded-md transition-all duration-300">📅 Presença</button>
+            <button data-page="cardio" class="nav-link flex-1 text-center p-2 rounded-md transition-all duration-300">🏃 Cardio</button>
+            <button data-page="treinos" class="nav-link flex-1 text-center p-2 rounded-md transition-all duration-300">🏋️ Treinos</button>
+            <button data-page="dados" class="nav-link flex-1 text-center p-2 rounded-md transition-all duration-300">📊 Dados</button>
+        </nav>
+
+        <main>
+            <section id="treinos" class="page">
+              <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
+                <h2 class="text-xl font-bold mb-4">Adicionar Novo Exercício</h2>
+                <form id="add-exercise-form" class="grid md:grid-cols-4 gap-4 items-end">
+                    <div class="md:col-span-2"><label for="exercise-name" class="block text-sm font-medium text-gray-700">Nome do Exercício</label><input type="text" id="exercise-name" required class="mt-1 block w-full p-2 border rounded-md"></div>
+                    <div><label for="exercise-series" class="block text-sm font-medium text-gray-700">Séries</label><input type="number" id="exercise-series" required class="mt-1 block w-full p-2 border rounded-md" value="3"></div>
+                    <div><label for="exercise-reps" class="block text-sm font-medium text-gray-700">Reps</label><input type="text" id="exercise-reps" required class="mt-1 block w-full p-2 border rounded-md" value="15"></div>
+                    <div class="md:col-span-3"><label for="exercise-workout" class="block text-sm font-medium text-gray-700">Associar ao Treino</label><select id="exercise-workout" class="mt-1 block w-full p-2 border rounded-md bg-white"><option value="A">Treino A</option><option value="B">Treino B</option><option value="C">Treino C</option></select></div>
+                    <button type="submit" class="bg-purple-600 text-white p-2 rounded-md font-semibold hover:bg-purple-700">Adicionar</button>
+                </form>
+              </div>
+              <div id="workouts-grid" class="grid md:grid-cols-3 gap-6"></div>
+            </section>
+
+            <section id="presenca" class="page">
+                 <div class="bg-white p-6 rounded-lg shadow-sm mb-6"><h2 class="text-xl font-bold mb-1">Registrar Presença</h2><p class="text-gray-500 mb-4">Escolha o treino que você realizará hoje para iniciar.</p><div id="presence-buttons" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div></div>
+                 <div class="bg-white p-6 rounded-lg shadow-sm"><h2 class="text-xl font-bold mb-4">Histórico de Presença</h2><ul id="presence-history" class="space-y-3"></ul></div>
+            </section>
+
+            <section id="cardio" class="page">
+                <div class="bg-white p-6 rounded-lg shadow-sm mb-6"><h2 class="text-xl font-bold mb-1">Registrar Cardio</h2><p class="text-gray-500 mb-4">Inicie e registre sua atividade de cardio.</p><div id="cardio-timer-display" class="text-center my-4 hidden"><p class="text-gray-500">Tempo de Cardio</p><p id="cardio-timer" class="text-4xl font-bold">00:00:00</p></div><form id="add-cardio-form" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"><select id="cardio-activity" class="p-2 border rounded-md bg-white md:col-span-2"><option>Esteira</option><option>Bicicleta</option><option>Elíptico</option><option>Outro</option></select><button type="button" id="start-cardio-btn" class="bg-green-500 text-white p-2 rounded-md font-semibold hover:bg-green-600 transition-colors">Iniciar Cardio</button><button type="button" id="stop-cardio-btn" class="hidden md:col-span-3 bg-purple-600 text-white p-3 rounded-md font-semibold hover:bg-purple-700 transition-colors">Concluir e Registrar Cardio</button></form></div>
+                <div class="bg-white p-6 rounded-lg shadow-sm"><h2 class="text-xl font-bold mb-4">Histórico de Cardio</h2><ul id="cardio-history" class="space-y-3"></ul></div>
+            </section>
+
+            <section id="dados" class="page">
+                <div class="bg-white p-6 rounded-lg shadow-sm mb-6"><h2 class="text-xl font-bold mb-4">Sincronização com a Nuvem</h2><p class="text-gray-600 mb-4">Os dados são sincronizados automaticamente. Use o botão para forçar uma sincronização se necessário.</p><button id="sync-btn" class="w-full bg-blue-500 text-white p-3 rounded-md font-semibold hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-refresh-cw"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Sincronizar Agora</button></div>
+                <div class="bg-white p-6 rounded-lg shadow-sm mb-6"><h2 class="text-xl font-bold mb-4">Estatísticas</h2><div class="grid md:grid-cols-2 gap-6"><div><h3 class="font-semibold mb-2">Distribuição de Treinos</h3><div class="relative h-72 w-full"><canvas id="workout-chart"></canvas></div></div><div><h3 class="font-semibold mb-2">Resumo do Histórico</h3><div id="stats-summary" class="space-y-2"></div></div></div></div>
+            </section>
+        </main>
+    </div>
+
+    <div id="workout-modal" class="modal-overlay"><div class="bg-white rounded-lg shadow-xl w-11/12 max-w-2xl p-6 flex flex-col max-h-[90vh]"><h2 class="text-2xl font-bold mb-2">Treino em Andamento</h2><div class="text-center bg-gray-100 p-4 rounded-lg mb-4"><p class="text-gray-500">Tempo Total</p><p id="workout-timer" class="text-5xl font-bold text-purple-600">00:00:00</p></div><div id="workout-todolist" class="space-y-3 flex-1 overflow-y-auto pr-2 mb-4"></div><div class="mt-auto"><button id="finish-workout-btn" disabled class="w-full bg-gray-400 text-white p-4 rounded-lg font-bold text-lg hover:bg-purple-700 transition-colors">Finalizar Treino</button></div></div></div>
+    <div id="cardio-prompt-modal" class="modal-overlay"><div class="bg-white rounded-lg shadow-xl w-11/12 max-w-sm p-6 text-center"><h2 class="text-xl font-bold mb-4">Treino finalizado!</h2><p class="text-gray-600 mb-6">Deseja registrar sua atividade de cardio agora?</p><div class="flex gap-4"><button id="cardio-prompt-yes" class="flex-1 bg-green-500 text-white p-2 rounded-md font-semibold hover:bg-green-600">Sim, vamos lá!</button><button id="cardio-prompt-no" class="flex-1 bg-gray-300 text-gray-800 p-2 rounded-md font-semibold hover:bg-gray-400">Não, obrigado</button></div></div></div>
+    <div id="cardio-summary-modal" class="modal-overlay"><div class="bg-white rounded-lg shadow-xl w-11/12 max-w-sm p-6 text-center"><h2 class="text-xl font-bold mb-4">Cardio Finalizado!</h2><p id="cardio-summary-text" class="text-gray-600 mb-6">Sua atividade foi registrada com sucesso.</p><button id="close-cardio-summary-btn" class="w-full bg-purple-600 text-white p-2 rounded-md font-semibold hover:bg-purple-700">Fechar</button></div></div>
+    
+<script>
+    // =========================================================================
+    // CONFIGURAÇÃO E VARIÁVEIS GLOBAIS
+    // =========================================================================
+    const AIRTABLE_API_KEY = 'patrUgNEUrJzK3uqq.7d2392f5e523737333531e18004ffedbc1bd4af35ff2c1afe4bcc17a559ea641';
+    const AIRTABLE_BASE_ID = 'app1TzPYsu3ni9i75';
+    const TBL_EXERCISES = 'Exercises';
+    const TBL_PRESENCE = 'PresenceHistory';
+    const TBL_CARDIO = 'CardioHistory';
+    let mainWorkoutSeconds = 0;
+
+    const pages = document.querySelectorAll('.page');
+    const navLinks = document.querySelectorAll('.nav-link');
+    let workoutChartInstance = null, workoutTimerInterval = null, cardioTimerInterval = null, currentWorkoutSession = null, cardioStartTime = null, isSyncing = false;
+
+    const defaultData = {
+        workouts: [ { id: 'A', name: 'Treino A', exercises: [] }, { id: 'B', name: 'Treino B', exercises: [] }, { id: 'C', name: 'Treino C', exercises: [] } ],
+        presenceHistory: [],
+        cardioHistory: []
+    };
+    let appData = {};
+
+    // =========================================================================
+    // FUNÇÕES DE DADOS (LOCALSTORAGE & AIRTABLE API)
+    // =========================================================================
+    const saveLocalData = () => localStorage.setItem('myGymData', JSON.stringify(appData));
+    const loadLocalData = () => {
+        const data = localStorage.getItem('myGymData');
+        appData = data ? JSON.parse(data) : JSON.parse(JSON.stringify(defaultData));
+        render();
+    };
+
+    async function syncWithAirtable() {
+        if (isSyncing) return;
+        isSyncing = true;
+        updateSyncStatus();
+        try {
+            const fetchOptions = { headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` } };
+            const [exercisesRes, presenceRes, cardioRes] = await Promise.all([
+                fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${TBL_EXERCISES}`, fetchOptions),
+                fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${TBL_PRESENCE}`, fetchOptions),
+                fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${TBL_CARDIO}`, fetchOptions)
+            ]);
+
+            if (!exercisesRes.ok || !presenceRes.ok || !cardioRes.ok) throw new Error(`Falha ao buscar dados do Airtable.`);
+
+            const exercisesData = await exercisesRes.json();
+            const presenceData = await presenceRes.json();
+            const cardioData = await cardioRes.json();
+
+            const mappedExercises = exercisesData.records.map(r => ({ airtableId: r.id, ...r.fields }));
+            appData.presenceHistory = presenceData.records.map(r => ({ airtableId: r.id, ...r.fields }));
+            appData.cardioHistory = cardioData.records.map(r => ({ airtableId: r.id, ...r.fields }));
+            
+            appData.workouts.forEach(w => {
+                w.exercises = mappedExercises.filter(ex => ex.Workout === w.id);
+            });
+            localStorage.setItem('myGymLastSync', new Date().toISOString());
+        } catch (error) {
+            console.error('Erro de sincronização com Airtable:', error);
+            alert('Ocorreu um erro durante a sincronização.');
+        } finally {
+            isSyncing = false;
+            saveLocalData();
+            render();
+        }
+    }
+
+    async function addAirtableRecord(tableName, fields) {
+        const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableName}`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ records: [{ fields }] })
+        });
+        if (!res.ok) {
+            console.error("Erro do Airtable:", await res.json());
+            throw new Error('Falha ao enviar dados para o Airtable.');
+        }
+        return await res.json();
+    }
+    
+    async function deleteAirtableRecord(tableName, airtableId) {
+        const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${tableName}/${airtableId}`;
+        const res = await fetch(url, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` }
+        });
+        if (!res.ok) throw new Error('Falha ao apagar dados do Airtable.');
+        return await res.json();
+    }
+
+    // =========================================================================
+    // LÓGICA DE RENDERIZAÇÃO E UI
+    // =========================================================================
+    const formatTime = (seconds) => { const h = Math.floor(seconds / 3600).toString().padStart(2, '0'); const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0'); const s = (seconds % 60).toString().padStart(2, '0'); return `${h}:${m}:${s}`; };
+    const updateSyncStatus = () => { const statusEl = document.getElementById('sync-status'); if (!statusEl) return; if (isSyncing) { statusEl.textContent = 'Sincronizando...'; statusEl.className = 'text-sm font-semibold p-2 rounded-lg text-blue-700 bg-blue-100 syncing'; } else { const lastSync = localStorage.getItem('myGymLastSync'); statusEl.textContent = lastSync ? `Sinc.: ${new Date(lastSync).toLocaleTimeString('pt-BR')}` : 'Pronto'; statusEl.className = 'text-sm font-semibold p-2 rounded-lg text-green-700 bg-green-100'; } };
+    function switchPage(pageId) { pages.forEach(p => p.classList.remove('active')); navLinks.forEach(l => l.classList.remove('active')); const newPage = document.getElementById(pageId); const newLink = document.querySelector(`.nav-link[data-page="${pageId}"]`); if(newPage) newPage.classList.add('active'); if(newLink) newLink.classList.add('active'); }
+
+    function renderWorkouts() { const grid = document.getElementById('workouts-grid'); grid.innerHTML = ''; appData.workouts.forEach(workout => { const exercisesHTML = workout.exercises.map(ex => `<li class="flex justify-between items-center text-sm py-1"><span>${ex.Name} (${ex.Series}x ${ex.Reps})</span><button data-action="delete-exercise" data-airtable-id="${ex.airtableId}" class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-md hover:bg-red-200 transition-colors">Excluir</button></li>`).join(''); const cardHTML = `<div class="bg-white p-4 rounded-lg shadow-sm"><h3 class="font-bold text-lg mb-2">Treino ${workout.id}</h3><ul class="space-y-1">${exercisesHTML || '<li class="text-sm text-gray-500">Nenhum exercício adicionado.</li>'}</ul></div>`; grid.innerHTML += cardHTML; }); }
+    function renderPresenceHistory() { const container = document.getElementById('presence-history'); if(!container) return; container.innerHTML = ''; const history = [...appData.presenceHistory].reverse(); if(history.length === 0){ container.innerHTML = '<li>Nenhum registro de presença.</li>'; return; } history.forEach(p => { const startDate = new Date(p.StartTime); const endDate = new Date(p.EndTime); const durationMinutes = Math.round((endDate - startDate) / 60000); const li = document.createElement('li'); li.className = 'bg-gray-100 p-3 rounded-md text-sm'; li.innerHTML = `<strong>Treino ${p.WorkoutID}</strong> em ${startDate.toLocaleDateString('pt-BR')} - Duração: ${durationMinutes} min`; container.appendChild(li); }); }
+    function renderCardioHistory() { const container = document.getElementById('cardio-history'); if(!container) return; container.innerHTML = ''; const history = [...appData.cardioHistory].reverse(); if(history.length === 0){ container.innerHTML = '<li>Nenhum registro de cardio.</li>'; return; } history.forEach(c => { const li = document.createElement('li'); li.className = 'bg-gray-100 p-3 rounded-md text-sm'; li.innerHTML = `<strong>${c.Activity}</strong> em ${new Date(c.Date).toLocaleDateString('pt-BR')} - Duração: ${c.Duration} min`; container.appendChild(li); }); }
+    function renderStats() { const summaryEl = document.getElementById('stats-summary'); if(!summaryEl) return; const totalWorkouts = appData.presenceHistory.length; const totalCardioMins = appData.cardioHistory.reduce((sum, c) => sum + (c.Duration || 0), 0); summaryEl.innerHTML = `<p><strong>Total de Treinos:</strong> ${totalWorkouts}</p><p><strong>Total de Minutos de Cardio:</strong> ${totalCardioMins}</p>`; const ctx = document.getElementById('workout-chart').getContext('2d'); if (workoutChartInstance) { workoutChartInstance.destroy(); } const workoutCounts = appData.presenceHistory.reduce((acc, p) => { acc[p.WorkoutID] = (acc[p.WorkoutID] || 0) + 1; return acc; }, {}); workoutChartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: Object.keys(workoutCounts), datasets: [{ label: 'Treinos Realizados', data: Object.values(workoutCounts), backgroundColor: ['#8b5cf6', '#10b981', '#3b82f6'], }] } }); }
+    
+    function renderPresenceButtons() {
+        const container = document.getElementById('presence-buttons');
+        if (!container) return;
+        container.innerHTML = '';
+
+        let lastWorkoutId = 'C'; // Assume 'C' como o último se não houver histórico, para sugerir 'A'
+
+        // Verifica se o histórico de presença existe e não está vazio
+        if (appData.presenceHistory && appData.presenceHistory.length > 0) {
+            
+            // --- INÍCIO DA CORREÇÃO ---
+            // Cria uma cópia e ordena o histórico pela data de início para encontrar o treino mais recente
+            const sortedHistory = [...appData.presenceHistory].sort((a, b) => {
+                // Compara as datas de início para ordenar do mais antigo para o mais recente
+                return new Date(a.StartTime) - new Date(b.StartTime);
+            });
+            // O último item do array ordenado é o treino mais recente
+            lastWorkoutId = sortedHistory[sortedHistory.length - 1].WorkoutID;
+            // --- FIM DA CORREÇÃO ---
+        }
+
+        // A lógica de sugestão agora usa o ID do último treino correto
+        let suggestedWorkoutId = 'A';
+        if (lastWorkoutId === 'A') suggestedWorkoutId = 'B';
+        if (lastWorkoutId === 'B') suggestedWorkoutId = 'C';
+
+        appData.workouts.forEach(w => {
+            if (w.exercises.length > 0) {
+                const isSuggested = w.id === suggestedWorkoutId;
+                const button = document.createElement('button');
+                button.className = `w-full p-4 rounded-lg font-bold text-white transition-transform duration-200 hover-scale-105 relative ${isSuggested ? 'suggested-glow' : ''}`;
+                button.textContent = `Iniciar ${w.name}`;
+                if (isSuggested) {
+                    const tag = document.createElement('span');
+                    tag.className = 'absolute bottom-1.5 left-2 bg-yellow-300 text-yellow-900 text-[10px] font-bold px-2 py-0.5 rounded-full';
+                    tag.textContent = 'INDICADO';
+                    button.appendChild(tag);
+                }
+                button.dataset.workoutId = w.id;
+                const colors = { A: '#3b82f6', B: '#10b981', C: '#8b5cf6' };
+                button.style.backgroundColor = colors[w.id] || '#6b7280';
+                button.onclick = () => startWorkout(w.id);
+                container.appendChild(button);
+            }
+        });
+
+        if (container.innerHTML === '') {
+            container.innerHTML = '<p class="text-gray-500 text-center md:col-span-3">Adicione exercícios aos treinos na aba "Treinos" para poder iniciar uma atividade.</p>';
+        }
+    }
+
+    function render() { if (!appData || !appData.workouts) return; renderWorkouts(); renderPresenceHistory(); renderCardioHistory(); renderStats(); renderPresenceButtons(); updateSyncStatus(); }
+
+    function handleExerciseCheck(event) {
+        if (!event.target.matches('.exercise-checkbox')) return;
+
+        const checkbox = event.target;
+        const exerciseIndex = checkbox.id.split('-')[1];
+        const timerEl = document.getElementById(`ex-timer-${exerciseIndex}`);
+
+        if (checkbox.checked) {
+            // Se a caixa for marcada, captura o tempo ATUAL do cronómetro principal
+            // e exibe-o de forma fixa.
+            timerEl.textContent = formatTime(mainWorkoutSeconds).substring(3); // Mostra MM:SS
+            timerEl.classList.remove('hidden');
+        } else {
+            // Se a caixa for desmarcada, simplesmente esconde o tempo
+            timerEl.classList.add('hidden');
+            timerEl.textContent = '';
+        }
+
+        // Chama a função para verificar se o treino foi concluído
+        checkWorkoutCompletion();
+    }
+
+    // =========================================================================
+    // LÓGICA DE AÇÕES E EVENTOS
+    // =========================================================================
+    
+    function startWorkout(workoutId) {
+        const workout = appData.workouts.find(w => w.id === workoutId);
+        if(!workout || workout.exercises.length === 0) {
+            alert('Este treino não tem exercícios! Adicione exercícios na aba "Treinos".');
+            return;
+        }
+
+        // Reseta o nosso cronómetro global
+        mainWorkoutSeconds = 0;
+
+        currentWorkoutSession = { id: `p_${crypto.randomUUID()}`, WorkoutID: workoutId, StartTime: new Date().toISOString(), EndTime: null };
+        const workoutModal = document.getElementById('workout-modal');
+        const todolist = document.getElementById('workout-todolist');
+        const finishButton = document.getElementById('finish-workout-btn');
+        
+        todolist.innerHTML = '';
+        if (workoutTimerInterval) clearInterval(workoutTimerInterval);
+        document.getElementById('workout-timer').textContent = '00:00:00';
+        finishButton.disabled = true;
+        finishButton.className = 'w-full bg-gray-400 text-white p-4 rounded-lg font-bold text-lg cursor-not-allowed';
+        
+        const exercisesHTML = workout.exercises.map((ex, index) => `
+            <div class="exercise-item flex items-center p-3 hover:bg-gray-50 border-b border-gray-100">
+                <input type="checkbox" id="ex-${index}" class="exercise-checkbox h-5 w-5 rounded text-purple-600 focus:ring-purple-500">
+                <label for="ex-${index}" class="ml-3 text-gray-700 flex-grow cursor-pointer">${ex.Name} (${ex.Series}x ${ex.Reps})</label>
+                <span id="ex-timer-${index}" class="ml-auto font-mono text-lg text-purple-600 hidden w-16 text-right"></span>
+            </div>
+        `).join('');
+        
+        todolist.innerHTML = exercisesHTML;
+        
+        todolist.removeEventListener('change', handleExerciseCheck);
+        todolist.addEventListener('change', handleExerciseCheck);
+        
+        // O cronómetro principal agora atualiza a variável global
+        workoutTimerInterval = setInterval(() => { 
+            mainWorkoutSeconds++; 
+            document.getElementById('workout-timer').textContent = formatTime(mainWorkoutSeconds); 
+        }, 1000);
+        
+        workoutModal.classList.add('active');
+        checkWorkoutCompletion();
+    }
+    
+    function checkWorkoutCompletion() {
+        const todolist = document.getElementById('workout-todolist');
+        const finishButton = document.getElementById('finish-workout-btn');
+        if (!todolist || !finishButton) return false;
+        const checkboxes = todolist.querySelectorAll('.exercise-checkbox');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        finishButton.disabled = !allChecked;
+        finishButton.className = allChecked ? 'w-full bg-purple-600 text-white p-4 rounded-lg font-bold text-lg hover:bg-purple-700 transition-colors' : 'w-full bg-gray-400 text-white p-4 rounded-lg font-bold text-lg cursor-not-allowed';
+        return allChecked;
+    }
+
+    function startCardio() {
+        cardioStartTime = Date.now();
+        document.getElementById('cardio-timer-display').classList.remove('hidden');
+        document.getElementById('start-cardio-btn').classList.add('hidden');
+        document.getElementById('stop-cardio-btn').classList.remove('hidden');
+        document.getElementById('cardio-activity').disabled = true;
+        cardioTimerInterval = setInterval(() => {
+            const elapsedSeconds = Math.floor((Date.now() - cardioStartTime) / 1000);
+            document.getElementById('cardio-timer').textContent = formatTime(elapsedSeconds);
+        }, 1000);
+    }
+
+    navLinks.forEach(link => link.addEventListener('click', () => switchPage(link.dataset.page)));
+    document.getElementById('sync-btn').addEventListener('click', syncWithAirtable);
+
+    document.getElementById('add-exercise-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const button = e.target.querySelector('button');
+        button.disabled = true;
+        button.textContent = 'Adicionando...';
+        const fields = { "ID": `ex_${crypto.randomUUID()}`, "Name": document.getElementById('exercise-name').value, "Series": parseInt(document.getElementById('exercise-series').value, 10), "Reps": document.getElementById('exercise-reps').value, "Workout": document.getElementById('exercise-workout').value };
+        try {
+            await addAirtableRecord(TBL_EXERCISES, fields);
+            e.target.reset();
+            await syncWithAirtable();
+        } catch (error) {
+            alert('Falha ao adicionar o exercício.');
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Adicionar';
+        }
+    });
+
+    document.getElementById('workouts-grid').addEventListener('click', async (e) => {
+        const target = e.target.closest('[data-action="delete-exercise"]');
+        if (!target || !confirm('Tem certeza?')) return;
+        const airtableId = target.dataset.airtableId;
+        target.textContent = '...';
+        target.disabled = true;
+        try {
+            await deleteAirtableRecord(TBL_EXERCISES, airtableId);
+            await syncWithAirtable();
+        } catch (error) {
+            alert('Falha ao apagar o exercício.');
+            render();
+        }
+    });
+    
+    document.getElementById('finish-workout-btn').addEventListener('click', async () => {
+        if (!checkWorkoutCompletion()) return;
+        const finishButton = document.getElementById('finish-workout-btn');
+        try {
+            finishButton.disabled = true;
+            finishButton.textContent = 'Finalizar Treino';
+            if (workoutTimerInterval) clearInterval(workoutTimerInterval);
+            if (currentWorkoutSession) {
+                const fields = { "ID": currentWorkoutSession.id, "WorkoutID": currentWorkoutSession.WorkoutID, "StartTime": currentWorkoutSession.StartTime, "EndTime": new Date().toISOString() };
+                await addAirtableRecord(TBL_PRESENCE, fields);
+                await syncWithAirtable(); 
+                currentWorkoutSession = null;
+                document.getElementById('workout-modal').classList.remove('active');
+                document.getElementById('cardio-prompt-modal').classList.add('active');
+            }
+        } catch (error) {
+            alert('Ocorreu um erro ao finalizar o treino.');
+            finishButton.disabled = false;
+            checkWorkoutCompletion();
+        }
+    });
+
+    document.getElementById('start-cardio-btn').addEventListener('click', startCardio);
+
+    document.getElementById('stop-cardio-btn').addEventListener('click', async () => {
+        clearInterval(cardioTimerInterval);
+        const fields = { "ID": `cardio_${crypto.randomUUID()}`, "Date": new Date().toISOString(), "Activity": document.getElementById('cardio-activity').value, "Duration": Math.max(1, Math.round((Date.now() - cardioStartTime) / 60000)) };
+        try {
+            await addAirtableRecord(TBL_CARDIO, fields);
+            await syncWithAirtable();
+            const summaryModal = document.getElementById('cardio-summary-modal');
+            const summaryText = document.getElementById('cardio-summary-text');
+            summaryText.innerHTML = `Sua atividade de <strong>${fields.Activity}</strong> com duração de <strong>${fields.Duration} min</strong> foi registrada!`;
+            summaryModal.classList.add('active');
+        } catch(error) {
+            alert('Falha ao registrar o cardio.');
+        } finally {
+            document.getElementById('cardio-timer-display').classList.add('hidden');
+            document.getElementById('start-cardio-btn').classList.remove('hidden');
+            document.getElementById('stop-cardio-btn').classList.add('hidden');
+            document.getElementById('cardio-activity').disabled = false;
+        }
+    });
+
+    document.getElementById('cardio-prompt-yes').addEventListener('click', () => { document.getElementById('cardio-prompt-modal').classList.remove('active'); switchPage('cardio'); });
+    document.getElementById('cardio-prompt-no').addEventListener('click', () => document.getElementById('cardio-prompt-modal').classList.remove('active'));
+    document.getElementById('close-cardio-summary-btn').addEventListener('click', () => document.getElementById('cardio-summary-modal').classList.remove('active'));
+
+
+    // =========================================================================
+    // INICIALIZAÇÃO DA APLICAÇÃO
+    // =========================================================================
+    window.addEventListener('load', () => {
+        loadLocalData();
+        switchPage('presenca');
+        syncWithAirtable();
+    });
+
+// No final do seu script, adicione este bloco para registrar o Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').then(registration => {
+                console.log('Service Worker (PWA) registrado com sucesso:', registration);
+            }).catch(registrationError => {
+                console.log('Falha ao registrar o Service Worker (PWA):', registrationError);
+            });
+        });
+    }
+
+</script>
+
+</body>
+</html>
+}
