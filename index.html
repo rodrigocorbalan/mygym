@@ -118,8 +118,14 @@
         updateSyncStatus();
         try {
             const fetchOptions = { headers: { 'Authorization': `Bearer ${AIRTABLE_API_KEY}` } };
+
+            // URL para ordenar os exercícios pelo campo "Order" em ordem crescente
+            const exercisesUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${TBL_EXERCISES}?sort%5B0%5D%5Bfield%5D=Order&sort%5B0%5D%5Bdirection%5D=asc`;
+
             const [exercisesRes, presenceRes, cardioRes] = await Promise.all([
-                fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${TBL_EXERCISES}`, fetchOptions),
+                // --- ALTERAÇÃO AQUI ---
+                // Usamos a nova URL que inclui os parâmetros de ordenação
+                fetch(exercisesUrl, fetchOptions),
                 fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${TBL_PRESENCE}`, fetchOptions),
                 fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${TBL_CARDIO}`, fetchOptions)
             ]);
