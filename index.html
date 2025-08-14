@@ -223,7 +223,7 @@
             container.appendChild(li);
         });
     }
-    
+
     function renderStats() { const summaryEl = document.getElementById('stats-summary'); if(!summaryEl) return; const totalWorkouts = appData.presenceHistory.length; const totalCardioMins = appData.cardioHistory.reduce((sum, c) => sum + (c.Duration || 0), 0); summaryEl.innerHTML = `<p><strong>Total de Treinos:</strong> ${totalWorkouts}</p><p><strong>Total de Minutos de Cardio:</strong> ${totalCardioMins}</p>`; const ctx = document.getElementById('workout-chart').getContext('2d'); if (workoutChartInstance) { workoutChartInstance.destroy(); } const workoutCounts = appData.presenceHistory.reduce((acc, p) => { acc[p.WorkoutID] = (acc[p.WorkoutID] || 0) + 1; return acc; }, {}); workoutChartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: Object.keys(workoutCounts), datasets: [{ label: 'Treinos Realizados', data: Object.values(workoutCounts), backgroundColor: ['#8b5cf6', '#10b981', '#3b82f6'], }] } }); }
     
     function renderPresenceButtons() {
@@ -410,31 +410,49 @@
     
     document.getElementById('finish-workout-btn').addEventListener('click', async () => {
         if (!checkWorkoutCompletion()) return;
+        
         const finishButton = document.getElementById('finish-workout-btn');
+        
+        // Desativa o botão IMEDIATAMENTE para prevenir cliques duplos
+        finishButton.disabled = true;
+        finishButton.textContent = 'Finalizando...';
+
         try {
-            finishButton.disabled = true;
-            finishButton.textContent = 'Finalizar Treino';
             if (workoutTimerInterval) clearInterval(workoutTimerInterval);
+
             if (currentWorkoutSession) {
                 const fields = { "ID": currentWorkoutSession.id, "WorkoutID": currentWorkoutSession.WorkoutID, "StartTime": currentWorkoutSession.StartTime, "EndTime": new Date().toISOString() };
                 await addAirtableRecord(TBL_PRESENCE, fields);
                 await syncWithAirtable(); 
                 currentWorkoutSession = null;
+                
+                // Em caso de sucesso, o modal fecha e o estado do botão já não importa
                 document.getElementById('workout-modal').classList.remove('active');
                 document.getElementById('cardio-prompt-modal').classList.add('active');
             }
         } catch (error) {
             alert('Ocorreu um erro ao finalizar o treino.');
+            // Se der erro, o botão é reativado no bloco 'finally'
+        } finally {
+            // Este bloco é executado no final, independentemente de sucesso ou erro
             finishButton.disabled = false;
-            checkWorkoutCompletion();
+            finishButton.textContent = 'Concluir e Registrar Treino';
+            checkWorkoutCompletion(); // Reavalia se o botão deve estar ativo
         }
     });
 
     document.getElementById('start-cardio-btn').addEventListener('click', startCardio);
 
     document.getElementById('stop-cardio-btn').addEventListener('click', async () => {
+        const stopButton = document.getElementById('stop-cardio-btn');
+
+        // Desativa o botão IMEDIATAMENTE
+        stopButton.disabled = true;
+        stopButton.textContent = 'Registando...';
+        
         clearInterval(cardioTimerInterval);
         const fields = { "ID": `cardio_${crypto.randomUUID()}`, "Date": new Date().toISOString(), "Activity": document.getElementById('cardio-activity').value, "Duration": Math.max(1, Math.round((Date.now() - cardioStartTime) / 60000)) };
+        
         try {
             await addAirtableRecord(TBL_CARDIO, fields);
             await syncWithAirtable();
@@ -445,10 +463,15 @@
         } catch(error) {
             alert('Falha ao registrar o cardio.');
         } finally {
+            // No final, reseta toda a interface do cardio
             document.getElementById('cardio-timer-display').classList.add('hidden');
             document.getElementById('start-cardio-btn').classList.remove('hidden');
             document.getElementById('stop-cardio-btn').classList.add('hidden');
             document.getElementById('cardio-activity').disabled = false;
+            
+            // Garante que o botão volte ao estado original
+            stopButton.disabled = false;
+            stopButton.textContent = 'Concluir e Registrar Cardio';
         }
     });
 
