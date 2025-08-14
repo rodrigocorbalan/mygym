@@ -180,8 +180,50 @@
     function switchPage(pageId) { pages.forEach(p => p.classList.remove('active')); navLinks.forEach(l => l.classList.remove('active')); const newPage = document.getElementById(pageId); const newLink = document.querySelector(`.nav-link[data-page="${pageId}"]`); if(newPage) newPage.classList.add('active'); if(newLink) newLink.classList.add('active'); }
 
     function renderWorkouts() { const grid = document.getElementById('workouts-grid'); grid.innerHTML = ''; appData.workouts.forEach(workout => { const exercisesHTML = workout.exercises.map(ex => `<li class="flex justify-between items-center text-sm py-1"><span>${ex.Name} (${ex.Series}x ${ex.Reps})</span><button data-action="delete-exercise" data-airtable-id="${ex.airtableId}" class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-md hover:bg-red-200 transition-colors">Excluir</button></li>`).join(''); const cardHTML = `<div class="bg-white p-4 rounded-lg shadow-sm"><h3 class="font-bold text-lg mb-2">Treino ${workout.id}</h3><ul class="space-y-1">${exercisesHTML || '<li class="text-sm text-gray-500">Nenhum exercício adicionado.</li>'}</ul></div>`; grid.innerHTML += cardHTML; }); }
-    function renderPresenceHistory() { const container = document.getElementById('presence-history'); if(!container) return; container.innerHTML = ''; const history = [...appData.presenceHistory].reverse(); if(history.length === 0){ container.innerHTML = '<li>Nenhum registro de presença.</li>'; return; } history.forEach(p => { const startDate = new Date(p.StartTime); const endDate = new Date(p.EndTime); const durationMinutes = Math.round((endDate - startDate) / 60000); const li = document.createElement('li'); li.className = 'bg-gray-100 p-3 rounded-md text-sm'; li.innerHTML = `<strong>Treino ${p.WorkoutID}</strong> em ${startDate.toLocaleDateString('pt-BR')} - Duração: ${durationMinutes} min`; container.appendChild(li); }); }
-    function renderCardioHistory() { const container = document.getElementById('cardio-history'); if(!container) return; container.innerHTML = ''; const history = [...appData.cardioHistory].reverse(); if(history.length === 0){ container.innerHTML = '<li>Nenhum registro de cardio.</li>'; return; } history.forEach(c => { const li = document.createElement('li'); li.className = 'bg-gray-100 p-3 rounded-md text-sm'; li.innerHTML = `<strong>${c.Activity}</strong> em ${new Date(c.Date).toLocaleDateString('pt-BR')} - Duração: ${c.Duration} min`; container.appendChild(li); }); }
+    
+    function renderPresenceHistory() {
+        const container = document.getElementById('presence-history');
+        if (!container) return;
+        container.innerHTML = '';
+
+        // ALTERAÇÃO AQUI: Trocamos .reverse() por .sort() para ordenar pela data de início
+        const history = [...appData.presenceHistory].sort((a, b) => new Date(b.StartTime) - new Date(a.StartTime));
+        
+        if (history.length === 0) {
+            container.innerHTML = '<li>Nenhum registro de presença.</li>';
+            return;
+        }
+        history.forEach(p => {
+            const startDate = new Date(p.StartTime);
+            const endDate = new Date(p.EndTime);
+            const durationMinutes = Math.round((endDate - startDate) / 60000);
+            const li = document.createElement('li');
+            li.className = 'bg-gray-100 p-3 rounded-md text-sm';
+            li.innerHTML = `<strong>Treino ${p.WorkoutID}</strong> em ${startDate.toLocaleDateString('pt-BR')} - Duração: ${durationMinutes} min`;
+            container.appendChild(li);
+        });
+    }
+
+    function renderCardioHistory() {
+        const container = document.getElementById('cardio-history');
+        if (!container) return;
+        container.innerHTML = '';
+
+        // ALTERAÇÃO AQUI: Trocamos .reverse() por .sort() para ordenar pela data do registo
+        const history = [...appData.cardioHistory].sort((a, b) => new Date(b.Date) - new Date(a.Date));
+        
+        if (history.length === 0) {
+            container.innerHTML = '<li>Nenhum registro de cardio.</li>';
+            return;
+        }
+        history.forEach(c => {
+            const li = document.createElement('li');
+            li.className = 'bg-gray-100 p-3 rounded-md text-sm';
+            li.innerHTML = `<strong>${c.Activity}</strong> em ${new Date(c.Date).toLocaleDateString('pt-BR')} - Duração: ${c.Duration} min`;
+            container.appendChild(li);
+        });
+    }
+    
     function renderStats() { const summaryEl = document.getElementById('stats-summary'); if(!summaryEl) return; const totalWorkouts = appData.presenceHistory.length; const totalCardioMins = appData.cardioHistory.reduce((sum, c) => sum + (c.Duration || 0), 0); summaryEl.innerHTML = `<p><strong>Total de Treinos:</strong> ${totalWorkouts}</p><p><strong>Total de Minutos de Cardio:</strong> ${totalCardioMins}</p>`; const ctx = document.getElementById('workout-chart').getContext('2d'); if (workoutChartInstance) { workoutChartInstance.destroy(); } const workoutCounts = appData.presenceHistory.reduce((acc, p) => { acc[p.WorkoutID] = (acc[p.WorkoutID] || 0) + 1; return acc; }, {}); workoutChartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: Object.keys(workoutCounts), datasets: [{ label: 'Treinos Realizados', data: Object.values(workoutCounts), backgroundColor: ['#8b5cf6', '#10b981', '#3b82f6'], }] } }); }
     
     function renderPresenceButtons() {
