@@ -6,6 +6,12 @@
     <title>MyGym</title>
     <meta name="description" content="MyGym - Gerencie seus treinos com foco.">
     <meta name="theme-color" content="#ffffff"/>
+    <meta name="msapplication-TileColor" content="#8f44fd">
+    <link rel="mask-icon" href="favicon.svg" color="#8f44fd">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <!-- 'theme-color' is not supported in Firefox/Opera; fallback handled in CSS below -->
+    <meta name="theme-color" content="#18181b" media="(prefers-color-scheme: dark)">
+    <meta name="msapplication-TileColor" content="#8f44fd">
     <link rel="apple-touch-icon" href="https://placehold.co/192x192/8f44fd/ffffff?text=Gym">
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,8 +20,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="icon" type="image/png" href="favicon.png">
-    
     <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Fallback for browsers that do not support meta theme-color */
+        @media (prefers-color-scheme: dark) {
+            body { background-color: #18181b; }
+        }
+        @media (prefers-color-scheme: light) {
+            body { background-color: #ffffff; }
+        }
         body { font-family: 'Inter', sans-serif; }
         .page { display: none; }
         .page.active { display: block; }
@@ -73,6 +86,84 @@
         margin-left: 0; /* Remove a margem esquerda padrão */
     }
 
+    /* Novos estilos para otimizar a lista de exercícios em tela menor */
+#workout-todolist .exercise-item {
+    padding-top: 0.5rem; /* Reduz o padding superior */
+    padding-bottom: 0.5rem; /* Reduz o padding inferior */
+    border-bottom: none !important; /* Remove a linha divisória */
+    align-items: baseline; /* Alinha os itens pela linha de base para melhor visualização com o cronómetro */
+}
+
+#workout-todolist label {
+    font-size: 0.9rem; /* Diminui um pouco o tamanho da fonte do texto do exercício */
+    margin-bottom: 0; /* Remove margem inferior desnecessária */
+}
+
+#workout-todolist .exercise-item > input.exercise-checkbox {
+    margin-top: 0.2rem; /* Ajusta o alinhamento vertical da checkbox */
+}
+
+#workout-todolist .exercise-item > span.ml-auto {
+    font-size: 0.8rem; /* Diminui o tamanho da fonte do cronómetro */
+    margin-left: 0.5rem; /* Reduz um pouco a margem esquerda */
+    width: auto !important; /* Permite que o cronómetro ocupe apenas o espaço necessário */
+}
+
+#workout-todolist .exercise-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto; /* Define um layout de grid para alinhar os elementos */
+    gap: 0.5rem; /* Adiciona um pequeno espaço entre as colunas do grid */
+}
+
+#workout-todolist .exercise-item > label {
+    grid-column: 2; /* Posiciona o texto do exercício na segunda coluna */
+    align-self: center; /* Alinha verticalmente o texto */
+}
+
+#workout-todolist .exercise-item > input.exercise-checkbox {
+    grid-column: 1; /* Posiciona a checkbox na primeira coluna */
+    align-self: start; /* Alinha verticalmente a checkbox no início */
+}
+
+#workout-todolist .exercise-item > span.ml-auto {
+    grid-column: 3; /* Posiciona o cronómetro na terceira coluna */
+    align-self: center; /* Alinha verticalmente o cronómetro */
+    text-align: right; /* Alinha o texto do cronómetro à direita */
+    margin-left: 0; /* Remove a margem esquerda padrão */
+}
+
+/* Novos ajustes para reduzir o espaço vertical */
+#workout-modal h2 {
+    margin-top: 1rem; /* Reduz a margem superior do título */
+    margin-bottom: 0.5rem; /* Reduz a margem inferior do título */
+    font-size: 1.5rem; /* Opcional: pode diminuir um pouco o tamanho do título também */
+}
+
+#workout-modal .bg-gray-100 {
+    padding-top: 0.5rem; /* Reduz o padding superior do tempo total */
+    padding-bottom: 0.5rem; /* Reduz o padding inferior do tempo total */
+    margin-bottom: 0.5rem; /* Reduz a margem inferior do tempo total */
+}
+
+#workout-modal .bg-gray-100 p:first-child {
+    font-size: 0.8rem; /* Diminui o tamanho da fonte de &quot;Tempo Total&quot; */
+    margin-bottom: 0.1rem;
+}
+
+#workout-modal .bg-gray-100 #workout-timer {
+    font-size: 2rem; /* Reduz o tamanho da fonte do cronómetro geral */
+}
+
+#workout-todolist {
+    margin-top: 0.5rem; /* Reduz a margem superior da lista */
+    margin-bottom: 1rem; /* Reduz a margem inferior da lista */
+}
+
+#finish-workout-btn {
+    padding-top: 0.75rem; /* Reduz o padding superior do botão */
+    padding-bottom: 0.75rem; /* Reduz o padding inferior do botão */
+    font-size: 1rem; /* Diminui o tamanho da fonte do botão */
+}
 
     </style>
 </head>
@@ -559,4 +650,3 @@
 
 </body>
 </html>
-}
